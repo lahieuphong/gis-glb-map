@@ -10,7 +10,7 @@ export default function ModelPanel({ selectedPlace, isOpen, onClose }) {
 
     async function loadModelViewer() {
       try {
-        await import('@google/model-viewer');
+        await import('@google/model-viewer/dist/model-viewer.min.js');
         if (isMounted) setViewerReady(true);
       } catch (error) {
         console.error('Không tải được @google/model-viewer:', error);
@@ -43,24 +43,30 @@ export default function ModelPanel({ selectedPlace, isOpen, onClose }) {
             <p>{selectedPlace.description}</p>
           </div>
 
-          <model-viewer
-            key={selectedPlace.id}
-            className="model-viewer"
-            src={selectedPlace.modelUrl}
-            alt={`Mô hình 3D của ${selectedPlace.name}`}
-            camera-controls
-            touch-action="pan-y"
-            auto-rotate
-            shadow-intensity="1"
-            exposure="0.9"
-            ar
-            ar-modes="webxr scene-viewer quick-look"
-          >
-            <div className="model-loading" slot="poster">
-              {viewerReady ? 'Đang tải mô hình 3D...' : 'Đang chuẩn bị trình xem 3D...'}
+          {viewerReady ? (
+            <model-viewer
+              key={selectedPlace.id}
+              className="model-viewer"
+              src={selectedPlace.modelUrl}
+              alt={`Mô hình 3D của ${selectedPlace.name}`}
+              camera-controls
+              touch-action="pan-y"
+              auto-rotate
+              shadow-intensity="1"
+              exposure="0.9"
+              ar
+              ar-modes="webxr scene-viewer quick-look"
+            >
+              <div className="model-loading" slot="poster">
+                Đang tải mô hình 3D...
+              </div>
+              <button className="ar-button" slot="ar-button">Xem AR</button>
+            </model-viewer>
+          ) : (
+            <div className="model-viewer model-loading">
+              Đang chuẩn bị trình xem 3D...
             </div>
-            <button className="ar-button" slot="ar-button">Xem AR</button>
-          </model-viewer>
+          )}
 
           <div className="model-meta">
             <span>File model:</span>

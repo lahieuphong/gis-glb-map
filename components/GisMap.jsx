@@ -6,7 +6,24 @@ import ModelPanel from '@/components/ModelPanel';
 
 const INITIAL_CENTER = [106.6953, 10.7769];
 const INITIAL_ZOOM = 13;
-const MAP_STYLE = 'https://tiles.openfreemap.org/styles/bright';
+const MAP_STYLE = {
+  version: 8,
+  sources: {
+    osm: {
+      type: 'raster',
+      tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+      tileSize: 256,
+      attribution: '© OpenStreetMap contributors'
+    }
+  },
+  layers: [
+    {
+      id: 'osm',
+      type: 'raster',
+      source: 'osm'
+    }
+  ]
+};
 
 function getFeatureById(id) {
   return placesGeojson.features.find((feature) => feature.properties.id === id);
@@ -15,6 +32,7 @@ function getFeatureById(id) {
 export default function GisMap() {
   const mapContainerRef = useRef(null);
   const mapRef = useRef(null);
+  const markerRefs = useRef([]);
   const [selectedPlace, setSelectedPlace] = useState(null);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   const [mapError, setMapError] = useState('');
@@ -73,22 +91,33 @@ export default function GisMap() {
             }
           });
 
-          map.addLayer({
-            id: 'places-label',
-            type: 'symbol',
-            source: 'places',
-            minzoom: 14,
-            layout: {
-              'text-field': ['get', 'name'],
-              'text-size': 13,
-              'text-offset': [0, 1.5],
-              'text-anchor': 'top'
-            },
-            paint: {
-              'text-color': '#111827',
-              'text-halo-color': '#ffffff',
-              'text-halo-width': 1.5
-            }
+          markerRefs.current = placesGeojson.features.map((feature) => {
+            const markerElement = document.createElement('button');
+            markerElement.type = 'button';
+            markerElement.className = 'place-marker-label';
+            markerElement.textContent = feature.properties.name;
+            markerElement.addEventListener('click', () => {
+              map.flyTo({
+                center: feature.geometry.coordinates,
+                zoom: Math.max(map.getZoom(), 17),
+                pitch: 55,
+                bearing: 0,
+                speed: 0.8,
+                curve: 1.2,
+                essential: true
+              });
+
+              setSelectedPlace(feature.properties);
+              setIsPanelOpen(true);
+            });
+
+            return new maplibregl.Marker({
+              element: markerElement,
+              anchor: 'top',
+              offset: [0, 16]
+            })
+              .setLngLat(feature.geometry.coordinates)
+              .addTo(map);
           });
 
           map.on('mouseenter', 'places-circle', () => {
@@ -137,6 +166,8 @@ export default function GisMap() {
     return () => {
       isMounted = false;
       if (mapRef.current) {
+        markerRefs.current.forEach((marker) => marker.remove());
+        markerRefs.current = [];
         mapRef.current.remove();
         mapRef.current = null;
       }
