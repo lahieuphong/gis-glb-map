@@ -1,67 +1,108 @@
-// GeoJSON dùng chuẩn tọa độ [longitude, latitude].
-// GLB thật nên đặt theo nhóm địa phương: public/models/{ma-tinh-ten-tinh}/{ten-di-tich}.glb.
-const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? '';
-const publicAsset = (path) => `${basePath}${path}`;
-const modelAsset = (locationFolder, fileName) => publicAsset(`/models/${locationFolder}/${fileName}`);
+import fs from 'node:fs';
+import path from 'node:path';
 
-export const placesGeojson = {
-  type: 'FeatureCollection',
-  features: [
-    {
+const placesDirectory = path.join(process.cwd(), 'data', 'places');
+const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? '';
+const publicAsset = (assetPath) => `${basePath}${assetPath}`;
+
+function readMarkdownFiles(directory) {
+  if (!fs.existsSync(directory)) return [];
+
+  return fs.readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+    const entryPath = path.join(directory, entry.name);
+
+    if (entry.isDirectory()) return readMarkdownFiles(entryPath);
+    if (entry.isFile() && entry.name.endsWith('.md')) return [entryPath];
+
+    return [];
+  });
+}
+
+function parseValue(value) {
+  const normalizedValue = value.trim();
+
+  if (normalizedValue.startsWith('[') && normalizedValue.endsWith(']')) {
+    return normalizedValue
+      .slice(1, -1)
+      .split(',')
+      .map((item) => item.trim())
+      .map((item) => {
+        const numberValue = Number(item);
+        return Number.isNaN(numberValue) ? item.replace(/^['"]|['"]$/g, '') : numberValue;
+      });
+  }
+
+  const numberValue = Number(normalizedValue);
+  if (!Number.isNaN(numberValue) && normalizedValue !== '') return numberValue;
+
+  return normalizedValue.replace(/^['"]|['"]$/g, '');
+}
+
+function parseFrontmatter(markdown, filePath) {
+  const match = markdown.match(/^---\n([\s\S]*?)\n---\n?([\s\S]*)$/);
+
+  if (!match) {
+    throw new Error(`Missing frontmatter in ${filePath}`);
+  }
+
+  const [, frontmatter, content] = match;
+  const data = {};
+
+  frontmatter.split('\n').forEach((line) => {
+    const separatorIndex = line.indexOf(':');
+    if (separatorIndex === -1) return;
+
+    const key = line.slice(0, separatorIndex).trim();
+    const value = line.slice(separatorIndex + 1);
+    data[key] = parseValue(value);
+  });
+
+  return {
+    data,
+    content: content.trim()
+  };
+}
+
+function modelUrl(modelPath) {
+  if (modelPath.startsWith('/models/')) return publicAsset(modelPath);
+  if (modelPath.startsWith('models/')) return publicAsset(`/${modelPath}`);
+  return publicAsset(`/models/${modelPath}`);
+}
+
+function markdownToFeature(filePath) {
+  const markdown = fs.readFileSync(filePath, 'utf8');
+  const { data, content } = parseFrontmatter(markdown, filePath);
+
+  return {
+    order: data.order ?? Number.MAX_SAFE_INTEGER,
+    feature: {
       type: 'Feature',
       properties: {
-        id: 'demo-1',
-        name: 'Điểm trải nghiệm 3D số 1',
-        description: 'Click điểm này để mở một mô hình công trình GLB mẫu.',
-        modelUrl: publicAsset('/models/demo-building.glb'),
-        category: 'Công trình'
+        id: data.id,
+        name: data.name,
+        description: data.description ?? content,
+        modelUrl: modelUrl(data.model),
+        category: data.category
       },
       geometry: {
         type: 'Point',
-        coordinates: [106.6953, 10.7769]
-      }
-    },
-    {
-      type: 'Feature',
-      properties: {
-        id: 'demo-2',
-        name: 'Điểm trải nghiệm 3D số 2',
-        description: 'Mẫu này đại diện cho kiosk/booth/nhà trưng bày nhỏ.',
-        modelUrl: publicAsset('/models/demo-pavilion.glb'),
-        category: 'Trưng bày'
-      },
-      geometry: {
-        type: 'Point',
-        coordinates: [106.7009, 10.7757]
-      }
-    },
-    {
-      type: 'Feature',
-      properties: {
-        id: 'demo-3',
-        name: 'Điểm trải nghiệm 3D số 3',
-        description: 'Mẫu này đại diện cho tượng đài/cột mốc/hiện vật ngoài trời.',
-        modelUrl: publicAsset('/models/demo-monument.glb'),
-        category: 'Hiện vật'
-      },
-      geometry: {
-        type: 'Point',
-        coordinates: [106.6882, 10.7826]
-      }
-    },
-    {
-      type: 'Feature',
-      properties: {
-        id: 'demo-4',
-        name: 'Nhà cổ Tràng An - Ninh Bình',
-        description: 'Không gian nhà gỗ truyền thống trong vùng lõi Di sản thế giới Tràng An, gắn với các làng cổ Trường Yên, Hoa Lư. Nhiều nếp nhà còn giữ kiến trúc Bắc Bộ như mái ngói, cột gỗ, tảng đá kê chân cột và hoa văn chạm khắc trên vì kèo, ngưỡng cửa.',
-        modelUrl: modelAsset('35-Ninh-Binh', 'Nha-co-Trang-An.glb'),
-        category: 'Nhà cổ'
-      },
-      geometry: {
-        type: 'Point',
-        coordinates: [105.905369, 20.2783]
+        coordinates: data.coordinates
       }
     }
-  ]
-};
+  };
+}
+
+export function getPlacesGeojson() {
+  const features = readMarkdownFiles(placesDirectory)
+    .map(markdownToFeature)
+    .sort((firstPlace, secondPlace) => {
+      if (firstPlace.order !== secondPlace.order) return firstPlace.order - secondPlace.order;
+      return firstPlace.feature.properties.id.localeCompare(secondPlace.feature.properties.id);
+    })
+    .map(({ feature }) => feature);
+
+  return {
+    type: 'FeatureCollection',
+    features
+  };
+}

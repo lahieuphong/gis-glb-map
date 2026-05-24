@@ -1,7 +1,6 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { placesGeojson } from '@/data/places';
 import ModelPanel from '@/components/ModelPanel';
 
 const INITIAL_CENTER = [106.6953, 10.7769];
@@ -33,11 +32,11 @@ const ICONS = {
   collapse: `${ICON_BASE_PATH}/icons/panel-collapse.svg`
 };
 
-function getFeatureById(id) {
+function getFeatureById(placesGeojson, id) {
   return placesGeojson.features.find((feature) => feature.properties.id === id);
 }
 
-export default function GisMap() {
+export default function GisMap({ placesGeojson }) {
   const mapContainerRef = useRef(null);
   const mapRef = useRef(null);
   const markerRefs = useRef([]);
@@ -51,7 +50,7 @@ export default function GisMap() {
 
   const categories = useMemo(
     () => Array.from(new Set(placesGeojson.features.map((feature) => feature.properties.category))),
-    []
+    [placesGeojson]
   );
 
   const visibleFeatures = useMemo(() => {
@@ -217,10 +216,10 @@ export default function GisMap() {
         mapRef.current = null;
       }
     };
-  }, []);
+  }, [placesGeojson]);
 
   const focusPlace = useCallback((id) => {
-    const feature = getFeatureById(id);
+    const feature = getFeatureById(placesGeojson, id);
     if (!feature || !mapRef.current) return;
 
     mapRef.current.flyTo({
@@ -234,7 +233,7 @@ export default function GisMap() {
 
     setSelectedPlace(feature.properties);
     setIsPanelOpen(true);
-  }, []);
+  }, [placesGeojson]);
 
   useEffect(() => {
     const map = mapRef.current;

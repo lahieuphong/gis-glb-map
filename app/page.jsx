@@ -1,5 +1,8 @@
 import GisMap from '@/components/GisMap';
+import { getPlacesGeojson } from '@/data/places';
 
 export default function HomePage() {
-  return <GisMap />;
+  const placesGeojson = getPlacesGeojson();
+
+  return <GisMap placesGeojson={placesGeojson} />;
 }
