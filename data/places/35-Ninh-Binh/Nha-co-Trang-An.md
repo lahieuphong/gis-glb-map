@@ -6,4 +6,4 @@ category: Nhà cổ
 model: 35-Ninh-Binh/Nha-co-Trang-An.glb
 coordinates: [105.905369, 20.2783]
 ---
-Không gian nhà gỗ truyền thống trong vùng lõi Di sản thế giới Tràng An, gắn với các làng cổ Trường Yên, Hoa Lư. Nhiều nếp nhà còn giữ kiến trúc Bắc Bộ như mái ngói, cột gỗ, tảng đá kê chân cột và hoa văn chạm khắc trên vì kèo, ngưỡng cửa.
+Ngôi nhà cổ ở thôn Trường Sơn, Trường Yên, Hoa Lư, Ninh Bình là nếp nhà gỗ truyền thống trong vùng lõi Di sản thế giới Tràng An, tiêu biểu với kiến trúc Bắc Bộ: nhà năm gian, cột gỗ kê đá tảng và hoa văn chạm khắc trên vì kèo, ngưỡng cửa.
