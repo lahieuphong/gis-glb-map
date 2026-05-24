@@ -267,74 +267,82 @@ export default function GisMap() {
 
         <div className={`catalog-dock ${isCatalogOpen ? 'open' : 'collapsed'}`}>
           <div className="catalog-icon-rail" role="toolbar" aria-label="Điều hướng nhanh khi thu gọn">
-            <button
-              type="button"
-              className="rail-icon"
-              onClick={() => setIsCatalogOpen(true)}
-              aria-label="Mở rộng danh sách"
-              title="Mở rộng"
-            >
-              <img src={ICONS.open} alt="" />
-            </button>
-            <button
-              type="button"
-              className="rail-icon"
-              onClick={() => setIsCatalogOpen(true)}
-              aria-label="Mở phần GIS và GLB"
-              title="GIS + GLB"
-            >
-              <img src={ICONS.gis} alt="" />
-            </button>
-            <button
-              type="button"
-              className="rail-icon"
-              onClick={() => setIsCatalogOpen(true)}
-              aria-label="Mở tiêu đề bản đồ di tích 3D"
-              title="Bản đồ di tích 3D"
-            >
-              <img src={ICONS.map} alt="" />
-            </button>
-            <button
-              type="button"
-              className={`rail-icon ${searchQuery ? 'active' : ''}`}
-              onClick={() => setIsCatalogOpen(true)}
-              aria-label="Mở tìm kiếm"
-              title="Tìm kiếm"
-            >
-              <img src={ICONS.search} alt="" />
-            </button>
-            <button
-              type="button"
-              className={`rail-icon ${activeCategory !== 'all' ? 'active' : ''}`}
-              onClick={() => setIsCatalogOpen(true)}
-              aria-label="Mở bộ lọc"
-              title="Bộ lọc"
-            >
-              <img src={ICONS.filter} alt="" />
-            </button>
+            <div className="rail-section rail-summary-icons">
+              <button
+                type="button"
+                className="rail-icon"
+                onClick={() => setIsCatalogOpen(true)}
+                aria-label="Mở rộng danh sách"
+                title="Mở rộng"
+              >
+                <img src={ICONS.open} alt="" />
+              </button>
+              <button
+                type="button"
+                className="rail-icon"
+                onClick={() => setIsCatalogOpen(true)}
+                aria-label="Mở phần GIS và GLB"
+                title="GIS + GLB"
+              >
+                <img src={ICONS.gis} alt="" />
+              </button>
+              <button
+                type="button"
+                className="rail-icon"
+                onClick={() => setIsCatalogOpen(true)}
+                aria-label="Mở tiêu đề bản đồ di tích 3D"
+                title="Bản đồ di tích 3D"
+              >
+                <img src={ICONS.map} alt="" />
+              </button>
+            </div>
 
-            <span className="rail-divider" aria-hidden="true" />
+            <div className="rail-section rail-single-icon">
+              <button
+                type="button"
+                className={`rail-icon ${searchQuery ? 'active' : ''}`}
+                onClick={() => setIsCatalogOpen(true)}
+                aria-label="Mở tìm kiếm"
+                title="Tìm kiếm"
+              >
+                <img src={ICONS.search} alt="" />
+              </button>
+            </div>
 
-            {visibleFeatures.map((feature) => {
-              const originalIndex = placesGeojson.features.findIndex(
-                (place) => place.properties.id === feature.properties.id
-              );
-              const isSelected = selectedPlace?.id === feature.properties.id;
+            <div className="rail-section rail-single-icon">
+              <button
+                type="button"
+                className={`rail-icon ${activeCategory !== 'all' ? 'active' : ''}`}
+                onClick={() => setIsCatalogOpen(true)}
+                aria-label="Mở bộ lọc"
+                title="Bộ lọc"
+              >
+                <img src={ICONS.filter} alt="" />
+              </button>
+            </div>
 
-              return (
-                <button
-                  type="button"
-                  key={feature.properties.id}
-                  className={`rail-icon rail-place ${isSelected ? 'active' : ''}`}
-                  onClick={() => focusPlace(feature.properties.id)}
-                  aria-label={feature.properties.name}
-                  title={feature.properties.name}
-                >
-                  <img src={ICONS.place} alt="" />
-                  <span>{originalIndex + 1}</span>
-                </button>
-              );
-            })}
+            <div className="rail-section rail-place-icons">
+              {visibleFeatures.map((feature) => {
+                const originalIndex = placesGeojson.features.findIndex(
+                  (place) => place.properties.id === feature.properties.id
+                );
+                const isSelected = selectedPlace?.id === feature.properties.id;
+
+                return (
+                  <button
+                    type="button"
+                    key={feature.properties.id}
+                    className={`rail-icon rail-place ${isSelected ? 'active' : ''}`}
+                    onClick={() => focusPlace(feature.properties.id)}
+                    aria-label={feature.properties.name}
+                    title={feature.properties.name}
+                  >
+                    <img src={ICONS.place} alt="" />
+                    <span>{originalIndex + 1}</span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           <div id="places-catalog" className="catalog-panel" aria-label="Danh sách di tích 3D">
