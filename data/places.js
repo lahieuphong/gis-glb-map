@@ -1,7 +1,8 @@
 // GeoJSON dùng chuẩn tọa độ [longitude, latitude].
-// Khi có GLB thật, hãy đặt file vào public/models rồi đổi modelUrl tương ứng.
+// GLB thật nên đặt theo nhóm địa phương: public/models/{ma-tinh-ten-tinh}/{ten-di-tich}.glb.
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? '';
 const publicAsset = (path) => `${basePath}${path}`;
+const modelAsset = (locationFolder, fileName) => publicAsset(`/models/${locationFolder}/${fileName}`);
 
 export const placesGeojson = {
   type: 'FeatureCollection',
@@ -54,7 +55,7 @@ export const placesGeojson = {
         id: 'demo-4',
         name: 'Nhà cổ Tràng An - Ninh Bình',
         description: 'Không gian nhà gỗ truyền thống trong vùng lõi Di sản thế giới Tràng An, gắn với các làng cổ Trường Yên, Hoa Lư. Nhiều nếp nhà còn giữ kiến trúc Bắc Bộ như mái ngói, cột gỗ, tảng đá kê chân cột và hoa văn chạm khắc trên vì kèo, ngưỡng cửa.',
-        modelUrl: publicAsset('/models/01-Nha-co-Trang-An-Ninh-Binh.glb'),
+        modelUrl: modelAsset('35-Ninh-Binh', 'Nha-co-Trang-An.glb'),
         category: 'Nhà cổ'
       },
       geometry: {
