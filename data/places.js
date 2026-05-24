@@ -47,6 +47,20 @@ export const placesGeojson = {
         type: 'Point',
         coordinates: [106.6882, 10.7826]
       }
+    },
+    {
+      type: 'Feature',
+      properties: {
+        id: 'demo-4',
+        name: 'Nhà cổ Tràng An - Ninh Bình',
+        description: 'Không gian nhà gỗ truyền thống trong vùng lõi Di sản thế giới Tràng An, gắn với các làng cổ Trường Yên, Hoa Lư. Nhiều nếp nhà còn giữ kiến trúc Bắc Bộ như mái ngói, cột gỗ, tảng đá kê chân cột và hoa văn chạm khắc trên vì kèo, ngưỡng cửa.',
+        modelUrl: publicAsset('/models/01-Nha-co-Trang-An-Ninh-Binh.glb'),
+        category: 'Nhà cổ'
+      },
+      geometry: {
+        type: 'Point',
+        coordinates: [105.905369, 20.2783]
+      }
     }
   ]
 };

@@ -75,10 +75,10 @@ code {
   bottom: 16px;
   left: 16px;
   width: min(390px, calc(100% - 32px));
-  --catalog-header-height: 122px;
-  --catalog-search-height: 96px;
-  --catalog-filter-height: 72px;
-  --catalog-row-height: 72px;
+  --catalog-header-height: 104px;
+  --catalog-search-height: 82px;
+  --catalog-filter-height: 58px;
+  --catalog-row-height: 60px;
   z-index: 2;
   transition: transform 220ms ease;
 }
@@ -127,7 +127,7 @@ code {
   align-content: start;
   grid-auto-rows: var(--catalog-row-height);
   gap: 0;
-  padding-top: 6px;
+  padding-top: 4px;
   overflow-y: auto;
 }
 
@@ -222,13 +222,13 @@ code {
   justify-content: space-between;
   gap: 16px;
   min-height: var(--catalog-header-height);
-  padding: 18px 18px 14px;
+  padding: 14px 18px 12px;
   border-bottom: 1px solid rgba(203, 213, 225, 0.36);
   background: rgba(255, 255, 255, 0.34);
 }
 
 .catalog-header h1 {
-  margin: 4px 0 0;
+  margin: 3px 0 0;
   color: #111827;
   font-size: 28px;
   line-height: 1.05;
@@ -289,9 +289,9 @@ code {
 .search-field {
   display: grid;
   align-content: center;
-  gap: 7px;
+  gap: 6px;
   min-height: var(--catalog-search-height);
-  padding: 14px 18px;
+  padding: 10px 18px;
 }
 
 .search-field span {
@@ -322,7 +322,7 @@ code {
   align-items: center;
   gap: 8px;
   min-height: var(--catalog-filter-height);
-  padding: 0 18px 14px;
+  padding: 0 18px 10px;
   overflow-x: auto;
   scrollbar-width: none;
 }
@@ -351,22 +351,22 @@ code {
 
 .catalog-list {
   display: grid;
-  gap: 8px;
+  gap: 6px;
   min-height: 0;
-  padding: 0 10px 10px;
+  padding: 0 10px 8px;
   overflow-y: auto;
 }
 
 .catalog-item {
   display: grid;
-  grid-template-columns: 36px minmax(0, 1fr) 20px;
+  grid-template-columns: 36px minmax(0, 1fr);
   align-items: center;
   gap: 10px;
   width: 100%;
   min-height: var(--catalog-row-height);
   border: 1px solid transparent;
   border-radius: 8px;
-  padding: 9px 10px;
+  padding: 7px 10px;
   background: rgba(255, 255, 255, 0.24);
   color: #111827;
   cursor: pointer;
@@ -417,11 +417,6 @@ code {
   font-weight: 700;
   white-space: nowrap;
   text-overflow: ellipsis;
-}
-
-.catalog-chevron {
-  color: #94a3b8;
-  font-weight: 900;
 }
 
 .empty-results {

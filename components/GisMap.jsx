@@ -395,9 +395,6 @@ export default function GisMap() {
                             <strong>{feature.properties.name}</strong>
                             <small>{feature.properties.category}</small>
                           </span>
-                          <span className="catalog-chevron" aria-hidden="true">
-                            &gt;
-                          </span>
                         </button>
                       );
                     })
