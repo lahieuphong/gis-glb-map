@@ -1,0 +1,22 @@
+{
+  "name": "gis-glb-nextjs-map",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "yarn@1.22.22",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start"
+  },
+  "dependencies": {
+    "@google/model-viewer": "latest",
+    "maplibre-gl": "latest",
+    "next": "latest",
+    "react": "latest",
+    "react-dom": "latest",
+    "three": "^0.182.0"
+  },
+  "engines": {
+    "node": ">=20.9.0"
+  }
+}
