@@ -26,8 +26,6 @@ const MAP_STYLE = {
 };
 const ICON_BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? '';
 const ICONS = {
-  gis: `${ICON_BASE_PATH}/icons/gis-glb.svg`,
-  map: `${ICON_BASE_PATH}/icons/map-3d.svg`,
   search: `${ICON_BASE_PATH}/icons/search.svg`,
   filter: `${ICON_BASE_PATH}/icons/filter.svg`,
   place: `${ICON_BASE_PATH}/icons/place-dot.svg`,
