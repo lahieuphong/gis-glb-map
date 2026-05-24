@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { placesGeojson } from '@/data/places';
 import ModelPanel from '@/components/ModelPanel';
 
@@ -36,9 +36,36 @@ export default function GisMap() {
   const [selectedPlace, setSelectedPlace] = useState(null);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   const [mapError, setMapError] = useState('');
+  const [isMapReady, setIsMapReady] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [activeCategory, setActiveCategory] = useState('all');
+
+  const categories = useMemo(
+    () => Array.from(new Set(placesGeojson.features.map((feature) => feature.properties.category))),
+    []
+  );
+
+  const visibleFeatures = useMemo(() => {
+    const normalizedQuery = searchQuery.trim().toLocaleLowerCase('vi-VN');
+
+    return placesGeojson.features.filter((feature) => {
+      const { name, category, description } = feature.properties;
+      const matchesCategory = activeCategory === 'all' || category === activeCategory;
+      const searchableText = `${name} ${category} ${description}`.toLocaleLowerCase('vi-VN');
+      const matchesSearch = !normalizedQuery || searchableText.includes(normalizedQuery);
+
+      return matchesCategory && matchesSearch;
+    });
+  }, [activeCategory, searchQuery]);
+
+  const visiblePlaceIds = useMemo(
+    () => new Set(visibleFeatures.map((feature) => feature.properties.id)),
+    [visibleFeatures]
+  );
 
   useEffect(() => {
     let isMounted = true;
+    setIsMapReady(false);
 
     async function setupMap() {
       try {
@@ -91,11 +118,13 @@ export default function GisMap() {
             }
           });
 
-          markerRefs.current = placesGeojson.features.map((feature) => {
+          markerRefs.current = placesGeojson.features.map((feature, index) => {
             const markerElement = document.createElement('button');
             markerElement.type = 'button';
-            markerElement.className = 'place-marker-label';
-            markerElement.textContent = feature.properties.name;
+            markerElement.className = 'place-marker-pin';
+            markerElement.textContent = String(index + 1);
+            markerElement.setAttribute('aria-label', feature.properties.name);
+            markerElement.title = feature.properties.name;
             markerElement.addEventListener('click', () => {
               map.flyTo({
                 center: feature.geometry.coordinates,
@@ -111,13 +140,18 @@ export default function GisMap() {
               setIsPanelOpen(true);
             });
 
-            return new maplibregl.Marker({
+            const marker = new maplibregl.Marker({
               element: markerElement,
-              anchor: 'top',
-              offset: [0, 16]
+              anchor: 'center'
             })
               .setLngLat(feature.geometry.coordinates)
               .addTo(map);
+
+            return {
+              id: feature.properties.id,
+              element: markerElement,
+              marker
+            };
           });
 
           map.on('mouseenter', 'places-circle', () => {
@@ -148,6 +182,8 @@ export default function GisMap() {
             setSelectedPlace(properties);
             setIsPanelOpen(true);
           });
+
+          setIsMapReady(true);
         });
 
         map.on('error', (event) => {
@@ -166,7 +202,7 @@ export default function GisMap() {
     return () => {
       isMounted = false;
       if (mapRef.current) {
-        markerRefs.current.forEach((marker) => marker.remove());
+        markerRefs.current.forEach(({ marker }) => marker.remove());
         markerRefs.current = [];
         mapRef.current.remove();
         mapRef.current = null;
@@ -191,29 +227,104 @@ export default function GisMap() {
     setIsPanelOpen(true);
   }, []);
 
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!isMapReady || !map) return;
+
+    const ids = Array.from(visiblePlaceIds);
+
+    if (map.getLayer('places-circle')) {
+      map.setFilter('places-circle', ['in', ['get', 'id'], ['literal', ids]]);
+    }
+
+    markerRefs.current.forEach(({ id, element }) => {
+      const isVisible = visiblePlaceIds.has(id);
+      const isSelected = selectedPlace?.id === id;
+
+      element.hidden = !isVisible;
+      element.classList.toggle('selected', isSelected);
+    });
+  }, [isMapReady, selectedPlace, visiblePlaceIds]);
+
   return (
     <main className="app-shell">
       <section className="map-section" aria-label="Bản đồ GIS có các điểm 3D">
         <div ref={mapContainerRef} className="map-container" />
 
-        <div className="map-overlay">
-          <p className="eyebrow">Next.js + GIS + GLB</p>
-          <h1>Bản đồ điểm 3D</h1>
-          <p>Zoom vào bản đồ, bấm vào chấm xanh để mở mô hình GLB của địa điểm đó.</p>
-          {mapError ? <p className="error-text">{mapError}</p> : null}
-        </div>
+        <div className="catalog-panel" aria-label="Danh sách di tích 3D">
+          <div className="catalog-header">
+            <div>
+              <p className="eyebrow">GIS + GLB</p>
+              <h1>Bản đồ di tích 3D</h1>
+            </div>
+            <span className="place-count">
+              {visibleFeatures.length}/{placesGeojson.features.length}
+            </span>
+          </div>
 
-        <div className="place-list" aria-label="Danh sách điểm mẫu">
-          {placesGeojson.features.map((feature) => (
+          <label className="search-field">
+            <span>Tìm kiếm</span>
+            <input
+              type="search"
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              placeholder="Tên di tích, nhóm, mô tả..."
+            />
+          </label>
+
+          <div className="category-tabs" aria-label="Lọc theo nhóm">
             <button
               type="button"
-              key={feature.properties.id}
-              onClick={() => focusPlace(feature.properties.id)}
+              className={activeCategory === 'all' ? 'active' : ''}
+              onClick={() => setActiveCategory('all')}
             >
-              <span>{feature.properties.name}</span>
-              <small>{feature.properties.category}</small>
+              Tất cả
             </button>
-          ))}
+            {categories.map((category) => (
+              <button
+                type="button"
+                key={category}
+                className={activeCategory === category ? 'active' : ''}
+                onClick={() => setActiveCategory(category)}
+              >
+                {category}
+              </button>
+            ))}
+          </div>
+
+          <div className="catalog-list" role="list">
+            {visibleFeatures.length ? (
+              visibleFeatures.map((feature) => {
+                const originalIndex = placesGeojson.features.findIndex(
+                  (place) => place.properties.id === feature.properties.id
+                );
+                const isSelected = selectedPlace?.id === feature.properties.id;
+
+                return (
+                  <button
+                    type="button"
+                    key={feature.properties.id}
+                    className={`catalog-item ${isSelected ? 'selected' : ''}`}
+                    onClick={() => focusPlace(feature.properties.id)}
+                    role="listitem"
+                  >
+                    <span className="catalog-index">{originalIndex + 1}</span>
+                    <span className="catalog-copy">
+                      <strong>{feature.properties.name}</strong>
+                      <small>{feature.properties.category}</small>
+                    </span>
+                    <span className="catalog-chevron" aria-hidden="true">
+                      &gt;
+                    </span>
+                  </button>
+                );
+              })
+            ) : (
+              <div className="empty-results">Không có kết quả phù hợp.</div>
+            )}
+          </div>
+
+          {mapError ? <p className="error-text">{mapError}</p> : null}
         </div>
       </section>
 
