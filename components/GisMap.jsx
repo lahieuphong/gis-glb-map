@@ -277,24 +277,6 @@ export default function GisMap() {
               >
                 <img src={ICONS.open} alt="" />
               </button>
-              <button
-                type="button"
-                className="rail-icon"
-                onClick={() => setIsCatalogOpen(true)}
-                aria-label="Mở phần GIS và GLB"
-                title="GIS + GLB"
-              >
-                <img src={ICONS.gis} alt="" />
-              </button>
-              <button
-                type="button"
-                className="rail-icon"
-                onClick={() => setIsCatalogOpen(true)}
-                aria-label="Mở tiêu đề bản đồ di tích 3D"
-                title="Bản đồ di tích 3D"
-              >
-                <img src={ICONS.map} alt="" />
-              </button>
             </div>
 
             <div className="rail-section rail-single-icon">
