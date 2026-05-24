@@ -31,7 +31,8 @@ const ICONS = {
   search: `${ICON_BASE_PATH}/icons/search.svg`,
   filter: `${ICON_BASE_PATH}/icons/filter.svg`,
   place: `${ICON_BASE_PATH}/icons/place-dot.svg`,
-  open: `${ICON_BASE_PATH}/icons/panel-open.svg`
+  open: `${ICON_BASE_PATH}/icons/panel-open.svg`,
+  collapse: `${ICON_BASE_PATH}/icons/panel-collapse.svg`
 };
 
 function getFeatureById(id) {
@@ -336,17 +337,6 @@ export default function GisMap() {
             })}
           </div>
 
-          <button
-            type="button"
-            className="catalog-toggle"
-            onClick={() => setIsCatalogOpen((isOpen) => !isOpen)}
-            aria-controls="places-catalog"
-            aria-expanded={isCatalogOpen}
-          >
-            <span aria-hidden="true">{isCatalogOpen ? '<' : '>'}</span>
-            <span>{isCatalogOpen ? 'Thu gọn' : 'Danh sách'}</span>
-          </button>
-
           <div id="places-catalog" className="catalog-panel" aria-label="Danh sách di tích 3D">
             {isCatalogOpen ? (
               <>
@@ -355,9 +345,15 @@ export default function GisMap() {
                     <p className="eyebrow">GIS + GLB</p>
                     <h1>Bản đồ di tích 3D</h1>
                   </div>
-                  <span className="place-count">
-                    {visibleFeatures.length}/{placesGeojson.features.length}
-                  </span>
+                  <button
+                    type="button"
+                    className="catalog-collapse-button"
+                    onClick={() => setIsCatalogOpen(false)}
+                    aria-label={`Thu gọn danh sách. Đang hiển thị ${visibleFeatures.length} trên ${placesGeojson.features.length} điểm`}
+                    title="Thu gọn"
+                  >
+                    <img src={ICONS.collapse} alt="" />
+                  </button>
                 </div>
 
                 <label className="search-field">

@@ -163,54 +163,6 @@ code {
   background: rgba(148, 163, 184, 0.34);
 }
 
-.catalog-toggle {
-  position: absolute;
-  top: 22px;
-  right: -52px;
-  display: grid;
-  place-items: center;
-  gap: 8px;
-  width: 52px;
-  height: 132px;
-  border: 1px solid rgba(148, 163, 184, 0.32);
-  border-left: 0;
-  border-radius: 0 8px 8px 0;
-  background: rgba(255, 255, 255, 0.72);
-  color: #111827;
-  cursor: pointer;
-  box-shadow: 10px 12px 34px rgba(15, 23, 42, 0.14);
-  backdrop-filter: blur(20px) saturate(1.25);
-  z-index: 3;
-}
-
-.catalog-toggle:hover {
-  background: rgba(255, 255, 255, 0.86);
-}
-
-.catalog-dock.collapsed .catalog-toggle {
-  opacity: 0;
-  pointer-events: none;
-}
-
-.catalog-toggle span:first-child {
-  display: grid;
-  place-items: center;
-  width: 26px;
-  height: 26px;
-  border-radius: 999px;
-  background: rgba(17, 24, 39, 0.08);
-  color: #111827;
-  font-weight: 900;
-}
-
-.catalog-toggle span:last-child {
-  font-size: 12px;
-  font-weight: 900;
-  line-height: 1;
-  text-transform: uppercase;
-  writing-mode: vertical-rl;
-}
-
 .catalog-panel {
   display: flex;
   flex-direction: column;
@@ -246,17 +198,28 @@ code {
   line-height: 1.05;
 }
 
-.place-count {
+.catalog-collapse-button {
   display: grid;
   place-items: center;
-  min-width: 54px;
-  height: 34px;
+  width: 40px;
+  height: 40px;
   border: 1px solid rgba(148, 163, 184, 0.34);
   border-radius: 8px;
   background: rgba(248, 250, 252, 0.56);
-  color: #334155;
-  font-size: 13px;
-  font-weight: 800;
+  cursor: pointer;
+  transition: background 160ms ease, border-color 160ms ease, transform 160ms ease;
+}
+
+.catalog-collapse-button:hover {
+  border-color: rgba(37, 99, 235, 0.46);
+  background: rgba(239, 246, 255, 0.82);
+  transform: translateY(-1px);
+}
+
+.catalog-collapse-button img {
+  width: 24px;
+  height: 24px;
+  pointer-events: none;
 }
 
 .viewer-header h2,
@@ -643,23 +606,6 @@ code {
     width: 1px;
     height: 28px;
     margin: 0 2px;
-  }
-
-  .catalog-toggle {
-    top: -43px;
-    right: auto;
-    left: 50%;
-    grid-auto-flow: column;
-    width: 148px;
-    height: 44px;
-    border: 1px solid rgba(148, 163, 184, 0.32);
-    border-bottom: 0;
-    border-radius: 8px 8px 0 0;
-    transform: translateX(-50%);
-  }
-
-  .catalog-toggle span:last-child {
-    writing-mode: horizontal-tb;
   }
 
   .catalog-panel {
