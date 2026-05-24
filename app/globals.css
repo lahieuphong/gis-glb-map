@@ -69,21 +69,165 @@ code {
   position: relative;
 }
 
-.catalog-panel {
+.catalog-dock {
   position: absolute;
   top: 16px;
   bottom: 16px;
   left: 16px;
-  display: flex;
-  flex-direction: column;
-  width: min(380px, calc(100% - 32px));
+  width: min(390px, calc(100% - 32px));
+  z-index: 2;
+  transition: transform 220ms ease;
+}
+
+.catalog-dock.collapsed {
+  transform: translateX(calc(-100% - 16px));
+}
+
+.catalog-icon-rail {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: -72px;
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  width: 58px;
+  padding: 8px;
+  border: 1px solid rgba(148, 163, 184, 0.32);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow: 10px 14px 36px rgba(15, 23, 42, 0.14);
+  backdrop-filter: blur(20px) saturate(1.25);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-8px);
+  transition: opacity 160ms ease, transform 220ms ease;
+  visibility: hidden;
+  overflow-y: auto;
+}
+
+.catalog-dock.collapsed .catalog-icon-rail {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(0);
+  visibility: visible;
+}
+
+.rail-icon {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
   border: 1px solid rgba(148, 163, 184, 0.28);
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.94);
-  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.16);
-  backdrop-filter: blur(14px);
-  z-index: 2;
+  background: rgba(255, 255, 255, 0.58);
+  cursor: pointer;
+  transition: background 160ms ease, border-color 160ms ease, transform 160ms ease;
+}
+
+.rail-icon:hover,
+.rail-icon.active {
+  border-color: rgba(37, 99, 235, 0.48);
+  background: rgba(239, 246, 255, 0.86);
+  transform: translateY(-1px);
+}
+
+.rail-icon img {
+  width: 22px;
+  height: 22px;
+  pointer-events: none;
+}
+
+.rail-place span {
+  position: absolute;
+  right: 3px;
+  bottom: 3px;
+  display: grid;
+  place-items: center;
+  min-width: 17px;
+  height: 17px;
+  border: 1px solid #ffffff;
+  border-radius: 999px;
+  background: #111827;
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.rail-divider {
+  width: 100%;
+  height: 1px;
+  margin: 2px 0;
+  background: rgba(148, 163, 184, 0.34);
+}
+
+.catalog-toggle {
+  position: absolute;
+  top: 22px;
+  right: -52px;
+  display: grid;
+  place-items: center;
+  gap: 8px;
+  width: 52px;
+  height: 132px;
+  border: 1px solid rgba(148, 163, 184, 0.32);
+  border-left: 0;
+  border-radius: 0 8px 8px 0;
+  background: rgba(255, 255, 255, 0.72);
+  color: #111827;
+  cursor: pointer;
+  box-shadow: 10px 12px 34px rgba(15, 23, 42, 0.14);
+  backdrop-filter: blur(20px) saturate(1.25);
+  z-index: 3;
+}
+
+.catalog-toggle:hover {
+  background: rgba(255, 255, 255, 0.86);
+}
+
+.catalog-dock.collapsed .catalog-toggle {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.catalog-toggle span:first-child {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  background: rgba(17, 24, 39, 0.08);
+  color: #111827;
+  font-weight: 900;
+}
+
+.catalog-toggle span:last-child {
+  font-size: 12px;
+  font-weight: 900;
+  line-height: 1;
+  text-transform: uppercase;
+  writing-mode: vertical-rl;
+}
+
+.catalog-panel {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow: 0 20px 55px rgba(15, 23, 42, 0.18);
+  backdrop-filter: blur(24px) saturate(1.3);
   overflow: hidden;
+  transition: opacity 160ms ease;
+}
+
+.catalog-dock.collapsed .catalog-panel {
+  opacity: 0;
+  pointer-events: none;
 }
 
 .catalog-header {
@@ -91,6 +235,8 @@ code {
   justify-content: space-between;
   gap: 16px;
   padding: 18px 18px 14px;
+  border-bottom: 1px solid rgba(203, 213, 225, 0.36);
+  background: rgba(255, 255, 255, 0.34);
 }
 
 .catalog-header h1 {
@@ -105,9 +251,9 @@ code {
   place-items: center;
   min-width: 54px;
   height: 34px;
-  border: 1px solid #dbe4ef;
+  border: 1px solid rgba(148, 163, 184, 0.34);
   border-radius: 8px;
-  background: #f8fafc;
+  background: rgba(248, 250, 252, 0.56);
   color: #334155;
   font-size: 13px;
   font-weight: 800;
@@ -144,7 +290,7 @@ code {
 .search-field {
   display: grid;
   gap: 7px;
-  padding: 0 18px 14px;
+  padding: 14px 18px;
 }
 
 .search-field span {
@@ -156,10 +302,10 @@ code {
 .search-field input {
   width: 100%;
   height: 42px;
-  border: 1px solid #dbe4ef;
+  border: 1px solid rgba(148, 163, 184, 0.36);
   border-radius: 8px;
   padding: 0 12px;
-  background: #ffffff;
+  background: rgba(255, 255, 255, 0.58);
   color: #111827;
   font: inherit;
   outline: none;
@@ -184,10 +330,10 @@ code {
 
 .category-tabs button {
   flex: 0 0 auto;
-  border: 1px solid #dbe4ef;
+  border: 1px solid rgba(148, 163, 184, 0.36);
   border-radius: 8px;
   padding: 8px 11px;
-  background: #ffffff;
+  background: rgba(255, 255, 255, 0.5);
   color: #475569;
   cursor: pointer;
   font-size: 13px;
@@ -196,7 +342,7 @@ code {
 
 .category-tabs button.active {
   border-color: #2563eb;
-  background: #eff6ff;
+  background: rgba(239, 246, 255, 0.78);
   color: #1d4ed8;
 }
 
@@ -218,7 +364,7 @@ code {
   border: 1px solid transparent;
   border-radius: 8px;
   padding: 9px 10px;
-  background: transparent;
+  background: rgba(255, 255, 255, 0.24);
   color: #111827;
   cursor: pointer;
   text-align: left;
@@ -226,8 +372,8 @@ code {
 
 .catalog-item:hover,
 .catalog-item.selected {
-  border-color: #cbd5e1;
-  background: #f8fafc;
+  border-color: rgba(148, 163, 184, 0.44);
+  background: rgba(248, 250, 252, 0.72);
 }
 
 .catalog-item.selected {
@@ -276,12 +422,41 @@ code {
 }
 
 .empty-results {
-  border: 1px dashed #cbd5e1;
+  border: 1px dashed rgba(148, 163, 184, 0.55);
   border-radius: 8px;
   padding: 18px;
   color: #64748b;
   font-size: 14px;
   text-align: center;
+  background: rgba(255, 255, 255, 0.28);
+}
+
+.catalog-rail {
+  display: grid;
+  place-items: center;
+  gap: 14px;
+  width: 100%;
+  height: 100%;
+  color: #111827;
+}
+
+.catalog-rail span {
+  color: #2563eb;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  writing-mode: vertical-rl;
+}
+
+.catalog-rail strong {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  background: #111827;
+  color: #ffffff;
+  font-size: 13px;
 }
 
 .place-marker-pin {
@@ -305,8 +480,12 @@ code {
   transform: scale(1.08);
 }
 
-.maplibregl-ctrl-bottom-left {
+.map-section.catalog-visible .maplibregl-ctrl-bottom-left {
   left: 400px;
+}
+
+.map-section.catalog-hidden .maplibregl-ctrl-bottom-left {
+  left: 64px;
 }
 
 .viewer-panel {
@@ -423,13 +602,67 @@ code {
     height: 100svh;
   }
 
-  .catalog-panel {
+  .catalog-dock {
     top: auto;
     right: 0;
     bottom: 0;
     left: 0;
     width: 100%;
-    max-height: 48svh;
+    height: min(52svh, 480px);
+  }
+
+  .catalog-dock.collapsed {
+    transform: translateY(calc(100% - 56px));
+  }
+
+  .catalog-icon-rail {
+    top: -62px;
+    right: 12px;
+    bottom: auto;
+    left: 12px;
+    display: flex;
+    align-items: center;
+    width: auto;
+    height: 52px;
+    padding: 6px;
+    transform: translateY(8px);
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+
+  .catalog-dock.collapsed .catalog-icon-rail {
+    transform: translateY(0);
+  }
+
+  .rail-icon {
+    flex: 0 0 40px;
+  }
+
+  .rail-divider {
+    flex: 0 0 1px;
+    width: 1px;
+    height: 28px;
+    margin: 0 2px;
+  }
+
+  .catalog-toggle {
+    top: -43px;
+    right: auto;
+    left: 50%;
+    grid-auto-flow: column;
+    width: 148px;
+    height: 44px;
+    border: 1px solid rgba(148, 163, 184, 0.32);
+    border-bottom: 0;
+    border-radius: 8px 8px 0 0;
+    transform: translateX(-50%);
+  }
+
+  .catalog-toggle span:last-child {
+    writing-mode: horizontal-tb;
+  }
+
+  .catalog-panel {
     border-right: 0;
     border-bottom: 0;
     border-left: 0;
@@ -455,9 +688,14 @@ code {
     padding-left: 8px;
   }
 
-  .maplibregl-ctrl-bottom-left {
+  .map-section.catalog-visible .maplibregl-ctrl-bottom-left {
     left: 0;
-    bottom: 48svh;
+    bottom: min(52svh, 480px);
+  }
+
+  .map-section.catalog-hidden .maplibregl-ctrl-bottom-left {
+    left: 0;
+    bottom: 56px;
   }
 
   .viewer-panel {

@@ -24,6 +24,15 @@ const MAP_STYLE = {
     }
   ]
 };
+const ICON_BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? '';
+const ICONS = {
+  gis: `${ICON_BASE_PATH}/icons/gis-glb.svg`,
+  map: `${ICON_BASE_PATH}/icons/map-3d.svg`,
+  search: `${ICON_BASE_PATH}/icons/search.svg`,
+  filter: `${ICON_BASE_PATH}/icons/filter.svg`,
+  place: `${ICON_BASE_PATH}/icons/place-dot.svg`,
+  open: `${ICON_BASE_PATH}/icons/panel-open.svg`
+};
 
 function getFeatureById(id) {
   return placesGeojson.features.find((feature) => feature.properties.id === id);
@@ -39,6 +48,7 @@ export default function GisMap() {
   const [isMapReady, setIsMapReady] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState('all');
+  const [isCatalogOpen, setIsCatalogOpen] = useState(true);
 
   const categories = useMemo(
     () => Array.from(new Set(placesGeojson.features.map((feature) => feature.properties.category))),
@@ -248,83 +258,179 @@ export default function GisMap() {
 
   return (
     <main className="app-shell">
-      <section className="map-section" aria-label="Bản đồ GIS có các điểm 3D">
+      <section
+        className={`map-section ${isCatalogOpen ? 'catalog-visible' : 'catalog-hidden'}`}
+        aria-label="Bản đồ GIS có các điểm 3D"
+      >
         <div ref={mapContainerRef} className="map-container" />
 
-        <div className="catalog-panel" aria-label="Danh sách di tích 3D">
-          <div className="catalog-header">
-            <div>
-              <p className="eyebrow">GIS + GLB</p>
-              <h1>Bản đồ di tích 3D</h1>
-            </div>
-            <span className="place-count">
-              {visibleFeatures.length}/{placesGeojson.features.length}
-            </span>
-          </div>
-
-          <label className="search-field">
-            <span>Tìm kiếm</span>
-            <input
-              type="search"
-              value={searchQuery}
-              onChange={(event) => setSearchQuery(event.target.value)}
-              placeholder="Tên di tích, nhóm, mô tả..."
-            />
-          </label>
-
-          <div className="category-tabs" aria-label="Lọc theo nhóm">
+        <div className={`catalog-dock ${isCatalogOpen ? 'open' : 'collapsed'}`}>
+          <div className="catalog-icon-rail" role="toolbar" aria-label="Điều hướng nhanh khi thu gọn">
             <button
               type="button"
-              className={activeCategory === 'all' ? 'active' : ''}
-              onClick={() => setActiveCategory('all')}
+              className="rail-icon"
+              onClick={() => setIsCatalogOpen(true)}
+              aria-label="Mở rộng danh sách"
+              title="Mở rộng"
             >
-              Tất cả
+              <img src={ICONS.open} alt="" />
             </button>
-            {categories.map((category) => (
-              <button
-                type="button"
-                key={category}
-                className={activeCategory === category ? 'active' : ''}
-                onClick={() => setActiveCategory(category)}
-              >
-                {category}
-              </button>
-            ))}
+            <button
+              type="button"
+              className="rail-icon"
+              onClick={() => setIsCatalogOpen(true)}
+              aria-label="Mở phần GIS và GLB"
+              title="GIS + GLB"
+            >
+              <img src={ICONS.gis} alt="" />
+            </button>
+            <button
+              type="button"
+              className="rail-icon"
+              onClick={() => setIsCatalogOpen(true)}
+              aria-label="Mở tiêu đề bản đồ di tích 3D"
+              title="Bản đồ di tích 3D"
+            >
+              <img src={ICONS.map} alt="" />
+            </button>
+            <button
+              type="button"
+              className={`rail-icon ${searchQuery ? 'active' : ''}`}
+              onClick={() => setIsCatalogOpen(true)}
+              aria-label="Mở tìm kiếm"
+              title="Tìm kiếm"
+            >
+              <img src={ICONS.search} alt="" />
+            </button>
+            <button
+              type="button"
+              className={`rail-icon ${activeCategory !== 'all' ? 'active' : ''}`}
+              onClick={() => setIsCatalogOpen(true)}
+              aria-label="Mở bộ lọc"
+              title="Bộ lọc"
+            >
+              <img src={ICONS.filter} alt="" />
+            </button>
+
+            <span className="rail-divider" aria-hidden="true" />
+
+            {visibleFeatures.map((feature) => {
+              const originalIndex = placesGeojson.features.findIndex(
+                (place) => place.properties.id === feature.properties.id
+              );
+              const isSelected = selectedPlace?.id === feature.properties.id;
+
+              return (
+                <button
+                  type="button"
+                  key={feature.properties.id}
+                  className={`rail-icon rail-place ${isSelected ? 'active' : ''}`}
+                  onClick={() => focusPlace(feature.properties.id)}
+                  aria-label={feature.properties.name}
+                  title={feature.properties.name}
+                >
+                  <img src={ICONS.place} alt="" />
+                  <span>{originalIndex + 1}</span>
+                </button>
+              );
+            })}
           </div>
 
-          <div className="catalog-list" role="list">
-            {visibleFeatures.length ? (
-              visibleFeatures.map((feature) => {
-                const originalIndex = placesGeojson.features.findIndex(
-                  (place) => place.properties.id === feature.properties.id
-                );
-                const isSelected = selectedPlace?.id === feature.properties.id;
+          <button
+            type="button"
+            className="catalog-toggle"
+            onClick={() => setIsCatalogOpen((isOpen) => !isOpen)}
+            aria-controls="places-catalog"
+            aria-expanded={isCatalogOpen}
+          >
+            <span aria-hidden="true">{isCatalogOpen ? '<' : '>'}</span>
+            <span>{isCatalogOpen ? 'Thu gọn' : 'Danh sách'}</span>
+          </button>
 
-                return (
+          <div id="places-catalog" className="catalog-panel" aria-label="Danh sách di tích 3D">
+            {isCatalogOpen ? (
+              <>
+                <div className="catalog-header">
+                  <div>
+                    <p className="eyebrow">GIS + GLB</p>
+                    <h1>Bản đồ di tích 3D</h1>
+                  </div>
+                  <span className="place-count">
+                    {visibleFeatures.length}/{placesGeojson.features.length}
+                  </span>
+                </div>
+
+                <label className="search-field">
+                  <span>Tìm kiếm</span>
+                  <input
+                    type="search"
+                    value={searchQuery}
+                    onChange={(event) => setSearchQuery(event.target.value)}
+                    placeholder="Tên di tích, nhóm, mô tả..."
+                  />
+                </label>
+
+                <div className="category-tabs" aria-label="Lọc theo nhóm">
                   <button
                     type="button"
-                    key={feature.properties.id}
-                    className={`catalog-item ${isSelected ? 'selected' : ''}`}
-                    onClick={() => focusPlace(feature.properties.id)}
-                    role="listitem"
+                    className={activeCategory === 'all' ? 'active' : ''}
+                    onClick={() => setActiveCategory('all')}
                   >
-                    <span className="catalog-index">{originalIndex + 1}</span>
-                    <span className="catalog-copy">
-                      <strong>{feature.properties.name}</strong>
-                      <small>{feature.properties.category}</small>
-                    </span>
-                    <span className="catalog-chevron" aria-hidden="true">
-                      &gt;
-                    </span>
+                    Tất cả
                   </button>
-                );
-              })
+                  {categories.map((category) => (
+                    <button
+                      type="button"
+                      key={category}
+                      className={activeCategory === category ? 'active' : ''}
+                      onClick={() => setActiveCategory(category)}
+                    >
+                      {category}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="catalog-list" role="list">
+                  {visibleFeatures.length ? (
+                    visibleFeatures.map((feature) => {
+                      const originalIndex = placesGeojson.features.findIndex(
+                        (place) => place.properties.id === feature.properties.id
+                      );
+                      const isSelected = selectedPlace?.id === feature.properties.id;
+
+                      return (
+                        <button
+                          type="button"
+                          key={feature.properties.id}
+                          className={`catalog-item ${isSelected ? 'selected' : ''}`}
+                          onClick={() => focusPlace(feature.properties.id)}
+                          role="listitem"
+                        >
+                          <span className="catalog-index">{originalIndex + 1}</span>
+                          <span className="catalog-copy">
+                            <strong>{feature.properties.name}</strong>
+                            <small>{feature.properties.category}</small>
+                          </span>
+                          <span className="catalog-chevron" aria-hidden="true">
+                            &gt;
+                          </span>
+                        </button>
+                      );
+                    })
+                  ) : (
+                    <div className="empty-results">Không có kết quả phù hợp.</div>
+                  )}
+                </div>
+
+                {mapError ? <p className="error-text">{mapError}</p> : null}
+              </>
             ) : (
-              <div className="empty-results">Không có kết quả phù hợp.</div>
+              <div className="catalog-rail" aria-hidden="true">
+                <span>GIS</span>
+                <strong>{placesGeojson.features.length}</strong>
+              </div>
             )}
           </div>
-
-          {mapError ? <p className="error-text">{mapError}</p> : null}
         </div>
       </section>
 
