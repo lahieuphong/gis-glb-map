@@ -1,153 +1,57 @@
-# GIS + GLB Map Demo — Next.js + Yarn
+# GIS + GLB Map
 
-Demo này là bản chuyển từ React/Vite sang **Next.js App Router + Yarn**.
+Ứng dụng Next.js hiển thị các địa điểm GIS trên MapLibre và mở model `.glb` tương ứng trong panel 3D.
 
-Tính năng chính:
-
-- Hiển thị bản đồ GIS bằng MapLibre GL JS.
-- Hiển thị các điểm dạng chấm từ GeoJSON.
-- Click vào điểm để zoom/fly tới vị trí đó.
-- Mở panel bên phải để xem file `.glb` bằng `<model-viewer>`.
-- Có sẵn 3 file GLB mẫu trong `public/models` để chạy thử ngay.
-
-## 1. Cài đặt
-
-Yêu cầu khuyến nghị:
-
-- Node.js 20 trở lên.
-- Yarn. Nếu máy chưa có Yarn, có thể dùng Corepack đi kèm Node.js mới.
-
-Chạy lệnh:
+## Chạy dự án
 
 ```bash
-corepack enable
-cd gis-glb-nextjs-map
 yarn install
 yarn dev
 ```
 
-Mở trình duyệt:
+Mở:
 
 ```txt
 http://localhost:3000
 ```
 
-## 2. Cấu trúc thư mục
+## Dữ liệu địa điểm
 
-```txt
-gis-glb-nextjs-map/
-├─ app/
-│  ├─ layout.jsx
-│  ├─ page.jsx
-│  └─ globals.css
-├─ components/
-│  ├─ GisMap.jsx
-│  └─ ModelPanel.jsx
-├─ data/
-│  └─ places.js
-├─ public/
-│  └─ models/
-│     ├─ demo-building.glb
-│     ├─ demo-pavilion.glb
-│     └─ demo-monument.glb
-├─ next.config.mjs
-├─ package.json
-└─ README.md
+Danh sách địa điểm nằm trong `data/places`.
+
+Mỗi địa điểm là một file Markdown có frontmatter:
+
+```md
+---
+order: 1
+id: place-1
+name: Nhà cổ Tràng An - Ninh Bình
+category: Nhà cổ
+model: 35-Ninh-Binh/Nha-co-Trang-An.glb
+coordinates: [105.905369, 20.2783]
+---
+Mô tả địa điểm.
 ```
 
-## 3. Thay điểm GIS
+Lưu ý: `coordinates` dùng thứ tự `[kinh độ, vĩ độ]`.
 
-Mở file:
+## Model GLB
 
-```txt
-data/places.js
+Các file `.glb` đặt trong `public/models`.
+
+Trường `model` trong Markdown trỏ tới đường dẫn bên trong thư mục này, ví dụ:
+
+```md
+model: 29-Ha-Noi/Chua_Mot_Cot.glb
 ```
 
-Mỗi điểm có dạng:
-
-```js
-{
-  type: 'Feature',
-  properties: {
-    id: 'demo-1',
-    name: 'Điểm trải nghiệm 3D số 1',
-    description: 'Click điểm này để mở mô hình GLB.',
-    modelUrl: '/models/demo-building.glb',
-    category: 'Công trình'
-  },
-  geometry: {
-    type: 'Point',
-    coordinates: [106.6953, 10.7769]
-  }
-}
-```
-
-Quan trọng: GeoJSON dùng thứ tự tọa độ:
-
-```txt
-[longitude, latitude]
-```
-
-Tức là:
-
-```txt
-[kinh độ, vĩ độ]
-```
-
-## 4. Thay file GLB thật
-
-Copy file GLB vào:
-
-```txt
-public/models/
-```
-
-Ví dụ:
-
-```txt
-public/models/nha-truyen-thong.glb
-```
-
-Sau đó đổi trong `data/places.js`:
-
-```js
-modelUrl: '/models/nha-truyen-thong.glb'
-```
-
-## 5. Những file quan trọng
-
-### `components/GisMap.jsx`
-
-Đây là component bản đồ chính. File này:
-
-- tạo map MapLibre,
-- add GeoJSON source,
-- add layer chấm,
-- bắt sự kiện click vào điểm,
-- gọi `map.flyTo`,
-- truyền điểm đang chọn sang `ModelPanel`.
-
-### `components/ModelPanel.jsx`
-
-Đây là panel xem model 3D. File này:
-
-- lazy-load `@google/model-viewer` phía client,
-- render thẻ `<model-viewer>`,
-- nhận `selectedPlace.modelUrl` để hiển thị đúng file GLB.
-
-## 6. Build production
+## Build
 
 ```bash
 yarn build
 yarn start
 ```
 
-## 7. Gợi ý nâng cấp tiếp theo
+## Tài liệu
 
-Khi demo chạy ổn, bạn có thể nâng cấp theo thứ tự:
-
-1. Đổi data từ `data/places.js` sang API.
-2. Lưu điểm GIS bằng PostgreSQL + PostGIS.
-3. Lưu GLB trên Cloudflare R2, Supabase Storage hoặc S3.
-4. Thêm clustering khi có nhiều điểm.
-5. Nếu muốn mô hình 3D nằm trực tiếp trên bản đồ, nghiên cứu MapLibre custom layer + Three.js hoặc CesiumJS + 3D Tiles.
+- [Hướng dẫn model GLB](public/models/README.md)

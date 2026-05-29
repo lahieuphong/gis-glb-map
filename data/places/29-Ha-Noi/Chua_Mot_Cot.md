@@ -1,6 +1,6 @@
 ---
-order: 5
-id: demo-5
+order: 2
+id: place-2
 name: Chùa Một Cột - Hà Nội
 category: Chùa
 model: 29-Ha-Noi/Chua_Mot_Cot.glb

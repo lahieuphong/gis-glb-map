@@ -1,6 +1,6 @@
 ---
-order: 6
-id: demo-6
+order: 3
+id: place-3
 name: Tháp Rùa Hồ Gươm - Hà Nội
 category: Di tích
 model: 29-Ha-Noi/Thap_Rua_Ho_Guom.glb

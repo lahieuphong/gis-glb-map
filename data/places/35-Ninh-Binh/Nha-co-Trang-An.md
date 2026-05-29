@@ -1,6 +1,6 @@
 ---
-order: 4
-id: demo-4
+order: 1
+id: place-1
 name: Nhà cổ Tràng An - Ninh Bình
 category: Nhà cổ
 model: 35-Ninh-Binh/Nha-co-Trang-An.glb
