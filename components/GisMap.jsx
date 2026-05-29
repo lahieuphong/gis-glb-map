@@ -1,10 +1,18 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import ModelPanel from '@/components/ModelPanel';
 
 const INITIAL_CENTER = [106.6953, 10.7769];
 const INITIAL_ZOOM = 13;
+const TILE_MAX_ZOOM = 18;
+const MAP_MAX_ZOOM = 17.25;
+const MAP_MAX_PITCH = 45;
+const FOCUS_ZOOM = 17;
+const FOCUS_PITCH = 45;
+const FOCUS_SPEED = 0.8;
+const FOCUS_CURVE = 1.2;
+const MAX_TILE_CACHE_SIZE = 96;
 const MAP_STYLE = {
   version: 8,
   sources: {
@@ -13,7 +21,7 @@ const MAP_STYLE = {
       tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
       tileSize: 256,
       minzoom: 0,
-      maxzoom: 19,
+      maxzoom: TILE_MAX_ZOOM,
       attribution: '© OpenStreetMap contributors'
     }
   },
@@ -38,6 +46,36 @@ function getFeatureById(placesGeojson, id) {
   return placesGeojson.features.find((feature) => feature.properties.id === id);
 }
 
+function getOptimizedPixelRatio() {
+  if (typeof window === 'undefined') return 1;
+
+  return Math.min(window.devicePixelRatio || 1, 1.5);
+}
+
+function focusMapOnCoordinates(map, coordinates) {
+  map.stop();
+  map.flyTo({
+    center: coordinates,
+    zoom: Math.min(Math.max(map.getZoom(), FOCUS_ZOOM), MAP_MAX_ZOOM),
+    pitch: FOCUS_PITCH,
+    bearing: 0,
+    speed: FOCUS_SPEED,
+    curve: FOCUS_CURVE,
+    essential: true
+  });
+}
+
+function isExpectedTileError(error) {
+  const message = String(error?.message ?? error ?? '').toLowerCase();
+
+  return (
+    error?.status === 0 ||
+    message.includes('abort') ||
+    message.includes('cancel') ||
+    message.includes('failed to fetch (0)')
+  );
+}
+
 export default function GisMap({ placesGeojson }) {
   const mapContainerRef = useRef(null);
   const mapRef = useRef(null);
@@ -49,6 +87,12 @@ export default function GisMap({ placesGeojson }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState('all');
   const [isCatalogOpen, setIsCatalogOpen] = useState(true);
+  const deferredSearchQuery = useDeferredValue(searchQuery);
+
+  const placeIndexById = useMemo(
+    () => new Map(placesGeojson.features.map((feature, index) => [feature.properties.id, index + 1])),
+    [placesGeojson]
+  );
 
   const categories = useMemo(
     () => Array.from(new Set(placesGeojson.features.map((feature) => feature.properties.category))),
@@ -56,7 +100,7 @@ export default function GisMap({ placesGeojson }) {
   );
 
   const visibleFeatures = useMemo(() => {
-    const normalizedQuery = searchQuery.trim().toLocaleLowerCase('vi-VN');
+    const normalizedQuery = deferredSearchQuery.trim().toLocaleLowerCase('vi-VN');
 
     return placesGeojson.features.filter((feature) => {
       const { name, category, description } = feature.properties;
@@ -66,7 +110,7 @@ export default function GisMap({ placesGeojson }) {
 
       return matchesCategory && matchesSearch;
     });
-  }, [activeCategory, searchQuery]);
+  }, [activeCategory, deferredSearchQuery, placesGeojson]);
 
   const visiblePlaceIds = useMemo(
     () => new Set(visibleFeatures.map((feature) => feature.properties.id)),
@@ -81,6 +125,7 @@ export default function GisMap({ placesGeojson }) {
       try {
         const maplibreModule = await import('maplibre-gl');
         const maplibregl = maplibreModule.default ?? maplibreModule;
+        maplibregl.setMaxParallelImageRequests?.(8);
 
         if (!isMounted || mapRef.current || !mapContainerRef.current) return;
 
@@ -90,7 +135,16 @@ export default function GisMap({ placesGeojson }) {
           center: INITIAL_CENTER,
           zoom: INITIAL_ZOOM,
           pitch: 0,
-          bearing: 0
+          bearing: 0,
+          maxZoom: MAP_MAX_ZOOM,
+          maxPitch: MAP_MAX_PITCH,
+          renderWorldCopies: false,
+          refreshExpiredTiles: false,
+          fadeDuration: 0,
+          maxTileCacheSize: MAX_TILE_CACHE_SIZE,
+          maxTileCacheZoomLevels: 2,
+          pixelRatio: getOptimizedPixelRatio(),
+          cancelPendingTileRequestsWhileZooming: true
         });
 
         mapRef.current = map;
@@ -136,16 +190,7 @@ export default function GisMap({ placesGeojson }) {
             markerElement.setAttribute('aria-label', feature.properties.name);
             markerElement.title = feature.properties.name;
             markerElement.addEventListener('click', () => {
-              map.flyTo({
-                center: feature.geometry.coordinates,
-                zoom: Math.max(map.getZoom(), 17),
-                pitch: 55,
-                bearing: 0,
-                speed: 0.8,
-                curve: 1.2,
-                essential: true
-              });
-
+              focusMapOnCoordinates(map, feature.geometry.coordinates);
               setSelectedPlace(feature.properties);
               setIsPanelOpen(true);
             });
@@ -179,16 +224,7 @@ export default function GisMap({ placesGeojson }) {
             const coordinates = feature.geometry.coordinates.slice();
             const properties = feature.properties;
 
-            map.flyTo({
-              center: coordinates,
-              zoom: Math.max(map.getZoom(), 17),
-              pitch: 55,
-              bearing: 0,
-              speed: 0.8,
-              curve: 1.2,
-              essential: true
-            });
-
+            focusMapOnCoordinates(map, coordinates);
             setSelectedPlace(properties);
             setIsPanelOpen(true);
           });
@@ -197,6 +233,8 @@ export default function GisMap({ placesGeojson }) {
         });
 
         map.on('error', (event) => {
+          if (isExpectedTileError(event?.error)) return;
+
           console.error('MapLibre error:', event?.error ?? event);
         });
       } catch (error) {
@@ -224,15 +262,7 @@ export default function GisMap({ placesGeojson }) {
     const feature = getFeatureById(placesGeojson, id);
     if (!feature || !mapRef.current) return;
 
-    mapRef.current.flyTo({
-      center: feature.geometry.coordinates,
-      zoom: 17,
-      pitch: 55,
-      speed: 0.8,
-      curve: 1.2,
-      essential: true
-    });
-
+    focusMapOnCoordinates(mapRef.current, feature.geometry.coordinates);
     setSelectedPlace(feature.properties);
     setIsPanelOpen(true);
   }, [placesGeojson]);
@@ -304,9 +334,7 @@ export default function GisMap({ placesGeojson }) {
 
             <div className="rail-section rail-place-icons">
               {visibleFeatures.map((feature) => {
-                const originalIndex = placesGeojson.features.findIndex(
-                  (place) => place.properties.id === feature.properties.id
-                );
+                const placeIndex = placeIndexById.get(feature.properties.id);
                 const isSelected = selectedPlace?.id === feature.properties.id;
 
                 return (
@@ -319,7 +347,7 @@ export default function GisMap({ placesGeojson }) {
                     title={feature.properties.name}
                   >
                     <img src={ICONS.place} alt="" />
-                    <span>{originalIndex + 1}</span>
+                    <span>{placeIndex}</span>
                   </button>
                 );
               })}
@@ -378,9 +406,7 @@ export default function GisMap({ placesGeojson }) {
                 <div className="catalog-list" role="list">
                   {visibleFeatures.length ? (
                     visibleFeatures.map((feature) => {
-                      const originalIndex = placesGeojson.features.findIndex(
-                        (place) => place.properties.id === feature.properties.id
-                      );
+                      const placeIndex = placeIndexById.get(feature.properties.id);
                       const isSelected = selectedPlace?.id === feature.properties.id;
 
                       return (
@@ -391,7 +417,7 @@ export default function GisMap({ placesGeojson }) {
                           onClick={() => focusPlace(feature.properties.id)}
                           role="listitem"
                         >
-                          <span className="catalog-index">{originalIndex + 1}</span>
+                          <span className="catalog-index">{placeIndex}</span>
                           <span className="catalog-copy">
                             <strong>{feature.properties.name}</strong>
                             <small>{feature.properties.category}</small>

@@ -9,6 +9,8 @@ export default function ModelPanel({ selectedPlace, isOpen, onClose }) {
     let isMounted = true;
 
     async function loadModelViewer() {
+      if (!isOpen || !selectedPlace || viewerReady) return;
+
       try {
         await import('@google/model-viewer/dist/model-viewer.min.js');
         if (isMounted) setViewerReady(true);
@@ -22,10 +24,12 @@ export default function ModelPanel({ selectedPlace, isOpen, onClose }) {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [isOpen, selectedPlace, viewerReady]);
+
+  const shouldRenderPlace = isOpen && selectedPlace;
 
   return (
-    <aside className={`viewer-panel ${isOpen ? 'open' : ''}`} aria-live="polite">
+    <aside className={`viewer-panel ${isOpen ? 'open' : ''}`} aria-hidden={!isOpen} aria-live="polite">
       <button
         type="button"
         className="close-button"
@@ -35,7 +39,7 @@ export default function ModelPanel({ selectedPlace, isOpen, onClose }) {
         ×
       </button>
 
-      {selectedPlace ? (
+      {shouldRenderPlace ? (
         <>
           <div className="viewer-header">
             <p className="eyebrow">Mô hình GLB</p>
@@ -49,6 +53,7 @@ export default function ModelPanel({ selectedPlace, isOpen, onClose }) {
               className="model-viewer"
               src={selectedPlace.modelUrl}
               alt={`Mô hình 3D của ${selectedPlace.name}`}
+              loading="lazy"
               camera-controls
               touch-action="pan-y"
               auto-rotate

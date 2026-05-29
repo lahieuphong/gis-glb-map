@@ -42,7 +42,7 @@ Các file `.glb` đặt trong `public/models`.
 Trường `model` trong Markdown trỏ tới đường dẫn bên trong thư mục này, ví dụ:
 
 ```md
-model: 29-Ha-Noi/Chua_Mot_Cot.glb
+model: 35-Ninh-Binh/Nha-co-Trang-An.glb
 ```
 
 ## Build
