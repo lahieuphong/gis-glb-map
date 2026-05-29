@@ -12,6 +12,8 @@ const MAP_STYLE = {
       type: 'raster',
       tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
       tileSize: 256,
+      minzoom: 0,
+      maxzoom: 19,
       attribution: '© OpenStreetMap contributors'
     }
   },
