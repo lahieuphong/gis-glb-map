@@ -1,32 +1,49 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
+
+const APP_BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? '';
+const VIEWER_MESSAGE_TYPE = 'gis-model-viewer:set-model';
+const VIEWER_READY_MESSAGE_TYPE = 'gis-model-viewer:ready';
 
 export default function ModelPanel({ selectedPlace, isOpen, onClose }) {
-  const [viewerReady, setViewerReady] = useState(false);
+  const viewerFrameRef = useRef(null);
+  const shouldRenderPlace = isOpen && selectedPlace;
+  const modelViewerFrameSrc = `${APP_BASE_PATH}/model-viewer`;
+
+  const sendSelectedModelToViewer = useCallback(() => {
+    if (!shouldRenderPlace || !viewerFrameRef.current?.contentWindow) return;
+
+    viewerFrameRef.current.contentWindow.postMessage(
+      {
+        type: VIEWER_MESSAGE_TYPE,
+        model: {
+          src: selectedPlace.modelUrl,
+          name: selectedPlace.name
+        }
+      },
+      window.location.origin
+    );
+  }, [selectedPlace, shouldRenderPlace]);
 
   useEffect(() => {
-    let isMounted = true;
+    sendSelectedModelToViewer();
+  }, [sendSelectedModelToViewer]);
 
-    async function loadModelViewer() {
-      if (!isOpen || !selectedPlace || viewerReady) return;
+  useEffect(() => {
+    function handleViewerMessage(event) {
+      if (event.origin !== window.location.origin) return;
+      if (event.data?.type !== VIEWER_READY_MESSAGE_TYPE) return;
 
-      try {
-        await import('@google/model-viewer/dist/model-viewer.min.js');
-        if (isMounted) setViewerReady(true);
-      } catch (error) {
-        console.error('Không tải được @google/model-viewer:', error);
-      }
+      sendSelectedModelToViewer();
     }
 
-    loadModelViewer();
+    window.addEventListener('message', handleViewerMessage);
 
     return () => {
-      isMounted = false;
+      window.removeEventListener('message', handleViewerMessage);
     };
-  }, [isOpen, selectedPlace, viewerReady]);
-
-  const shouldRenderPlace = isOpen && selectedPlace;
+  }, [sendSelectedModelToViewer]);
 
   return (
     <aside className={`viewer-panel ${isOpen ? 'open' : ''}`} aria-hidden={!isOpen} aria-live="polite">
@@ -47,26 +64,18 @@ export default function ModelPanel({ selectedPlace, isOpen, onClose }) {
             <p>{selectedPlace.description}</p>
           </div>
 
-          {viewerReady ? (
-            <model-viewer
-              key={selectedPlace.id}
-              className="model-viewer"
-              src={selectedPlace.modelUrl}
-              alt={`Mô hình 3D của ${selectedPlace.name}`}
+          {shouldRenderPlace ? (
+            <iframe
+              ref={viewerFrameRef}
+              className="model-viewer-frame"
+              src={modelViewerFrameSrc}
+              title={`Mô hình 3D của ${selectedPlace.name}`}
               loading="lazy"
-              camera-controls
-              touch-action="pan-y"
-              auto-rotate
-              shadow-intensity="1"
-              exposure="0.9"
-              ar
-              ar-modes="webxr scene-viewer quick-look"
-            >
-              <div className="model-loading" slot="poster">
-                Đang tải mô hình 3D...
-              </div>
-              <button className="ar-button" slot="ar-button">Xem AR</button>
-            </model-viewer>
+              onLoad={sendSelectedModelToViewer}
+              sandbox="allow-scripts allow-same-origin allow-popups"
+              allow="fullscreen; xr-spatial-tracking"
+              allowFullScreen
+            />
           ) : (
             <div className="model-viewer model-loading">
               Đang chuẩn bị trình xem 3D...

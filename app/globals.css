@@ -531,7 +531,8 @@ code {
   margin-bottom: 18px;
 }
 
-.model-viewer {
+.model-viewer,
+.model-viewer-frame {
   width: 100%;
   height: min(58vh, 520px);
   min-height: 360px;
@@ -539,6 +540,24 @@ code {
   background: linear-gradient(145deg, #f1f5f9, #ffffff);
   overflow: hidden;
   box-shadow: inset 0 0 0 1px #e5e7eb;
+}
+
+.model-viewer-frame {
+  display: block;
+  border: 0;
+}
+
+.isolated-model-page {
+  width: 100%;
+  min-height: 100dvh;
+  margin: 0;
+  background: linear-gradient(145deg, #f1f5f9, #ffffff);
+}
+
+.isolated-model-viewer {
+  width: 100%;
+  height: 100dvh;
+  background: linear-gradient(145deg, #f1f5f9, #ffffff);
 }
 
 .model-loading {
@@ -714,7 +733,8 @@ code {
     padding: 20px;
   }
 
-  .model-viewer {
+  .model-viewer,
+  .model-viewer-frame {
     min-height: 300px;
   }
 }
