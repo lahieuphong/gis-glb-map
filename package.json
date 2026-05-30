@@ -9,14 +9,17 @@
     "start": "next start"
   },
   "dependencies": {
-    "@google/model-viewer": "latest",
-    "maplibre-gl": "latest",
-    "next": "latest",
-    "react": "latest",
-    "react-dom": "latest",
+    "@google/model-viewer": "^4.2.0",
+    "maplibre-gl": "^5.24.0",
+    "next": "^16.2.6",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6",
     "three": "^0.182.0"
   },
   "engines": {
     "node": ">=20.9.0"
+  },
+  "resolutions": {
+    "postcss": "^8.5.15"
   }
 }
