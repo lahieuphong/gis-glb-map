@@ -71,7 +71,7 @@ export default function ModelPanel({ selectedPlace, isOpen, onClose }) {
         onClick={onClose}
         aria-label="Đóng khung xem 3D"
       >
-        ×
+        <img src={`${APP_BASE_PATH}/icons/close.svg`} alt="" aria-hidden="true" />
       </button>
 
       {shouldRenderPlace ? (
