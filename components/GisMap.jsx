@@ -555,7 +555,11 @@ export default function GisMap({ placesGeojson }) {
     if (deltaY > 44 && isCatalogExpanded && gesture.listScrollTop <= 8) {
       setIsCatalogExpanded(false);
     }
-  }, [isCatalogExpanded, isCatalogOpen, openCatalog, openCatalogExpanded, resetCatalogDragOffset]);
+    // Missing case: drag DOWN from open (non-expanded) → close catalog
+    if (deltaY > 44 && !isCatalogExpanded && isCatalogOpen) {
+      closeCatalog();
+    }
+  }, [closeCatalog, isCatalogExpanded, isCatalogOpen, openCatalog, openCatalogExpanded, resetCatalogDragOffset]);
 
   const handleCatalogTouchMove = useCallback((event) => {
     const gesture = catalogTouchStartRef.current;
@@ -564,7 +568,11 @@ export default function GisMap({ placesGeojson }) {
     const currentY = event.touches[0]?.clientY ?? gesture.y;
     const deltaY = currentY - gesture.y;
     const shouldPreviewExpand = deltaY < -8 && !isCatalogExpanded;
-    const shouldPreviewCollapse = deltaY > 8 && isCatalogExpanded && gesture.listScrollTop <= 8;
+    // Smooth preview for: un-expand (expanded→open) OR close (open→collapsed)
+    const shouldPreviewCollapse = deltaY > 8 && (
+      (isCatalogExpanded && gesture.listScrollTop <= 8) ||
+      (!isCatalogExpanded && isCatalogOpen)
+    );
 
     if (shouldPreviewExpand || shouldPreviewCollapse) {
       setCatalogDragOffset(getCatalogDragPreviewOffset(deltaY, isCatalogOpen, isCatalogExpanded));

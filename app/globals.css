@@ -635,8 +635,8 @@ code {
     height: calc(min(52svh, 480px) + 260px);
     transform: translate3d(0, var(--catalog-drag-y), 0);
     transition:
-      height 280ms cubic-bezier(0.22, 1, 0.36, 1),
-      transform 280ms cubic-bezier(0.22, 1, 0.36, 1);
+      height 380ms cubic-bezier(0.25, 1, 0.5, 1),
+      transform 380ms cubic-bezier(0.25, 1, 0.5, 1);
     will-change: height, transform;
   }
 
