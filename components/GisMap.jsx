@@ -76,11 +76,19 @@ function isExpectedTileError(error) {
   );
 }
 
+function isMobileCatalogViewport() {
+  if (typeof window === 'undefined') return false;
+
+  return window.matchMedia('(max-width: 720px)').matches;
+}
+
 export default function GisMap({ placesGeojson }) {
   const mapContainerRef = useRef(null);
   const mapRef = useRef(null);
   const overlayCanvasRef = useRef(null);
   const catalogDragStartRef = useRef(null);
+  const catalogTouchStartRef = useRef(null);
+  const suppressCatalogHandleClickRef = useRef(false);
   const drawStateRef = useRef(null);
   const markersScreenRef = useRef([]);
   const drawMarkersRef = useRef(null);
@@ -92,6 +100,7 @@ export default function GisMap({ placesGeojson }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState('all');
   const [isCatalogOpen, setIsCatalogOpen] = useState(true);
+  const [isCatalogExpanded, setIsCatalogExpanded] = useState(false);
   const deferredSearchQuery = useDeferredValue(searchQuery);
 
   const placeIndexById = useMemo(
@@ -345,6 +354,16 @@ export default function GisMap({ placesGeojson }) {
     setIsPanelOpen(true);
   }, [placesGeojson]);
 
+  const openCatalog = useCallback(() => {
+    setIsCatalogExpanded(false);
+    setIsCatalogOpen(true);
+  }, []);
+
+  const closeCatalog = useCallback(() => {
+    setIsCatalogExpanded(false);
+    setIsCatalogOpen(false);
+  }, []);
+
   const handleCatalogDragStart = useCallback((event) => {
     catalogDragStartRef.current = event.clientY;
     event.currentTarget.setPointerCapture?.(event.pointerId);
@@ -358,10 +377,28 @@ export default function GisMap({ placesGeojson }) {
       dragTarget.releasePointerCapture(event.pointerId);
     }
 
-    if (typeof startY === 'number' && event.clientY - startY > 36) {
-      setIsCatalogOpen(false);
+    if (!isMobileCatalogViewport()) return;
+
+    const deltaY = event.clientY - startY;
+    if (typeof startY === 'number' && Math.abs(deltaY) > 36) {
+      suppressCatalogHandleClickRef.current = true;
+      window.setTimeout(() => {
+        suppressCatalogHandleClickRef.current = false;
+      }, 0);
     }
-  }, []);
+
+    if (typeof startY === 'number' && deltaY < -36) {
+      setIsCatalogExpanded(true);
+    }
+
+    if (typeof startY === 'number' && deltaY > 36) {
+      if (isCatalogExpanded) {
+        setIsCatalogExpanded(false);
+      } else {
+        closeCatalog();
+      }
+    }
+  }, [closeCatalog, isCatalogExpanded]);
 
   const handleCatalogDragCancel = useCallback((event) => {
     const dragTarget = event.currentTarget;
@@ -370,6 +407,67 @@ export default function GisMap({ placesGeojson }) {
       dragTarget.releasePointerCapture(event.pointerId);
     }
   }, []);
+
+  const handleCatalogHandleClick = useCallback((event) => {
+    if (!isMobileCatalogViewport()) return;
+
+    if (suppressCatalogHandleClickRef.current) {
+      event.preventDefault();
+      suppressCatalogHandleClickRef.current = false;
+      return;
+    }
+
+    if (isCatalogExpanded) {
+      setIsCatalogExpanded(false);
+    } else {
+      closeCatalog();
+    }
+  }, [closeCatalog, isCatalogExpanded]);
+
+  const handleCatalogWheel = useCallback((event) => {
+    if (!isMobileCatalogViewport()) return;
+
+    if (event.deltaY > 18 && !isCatalogExpanded) {
+      setIsCatalogExpanded(true);
+      return;
+    }
+
+    if (event.deltaY < -18 && isCatalogExpanded) {
+      const catalogList = event.currentTarget.querySelector('.catalog-list');
+      if (!catalogList || catalogList.scrollTop <= 4) {
+        setIsCatalogExpanded(false);
+      }
+    }
+  }, [isCatalogExpanded]);
+
+  const handleCatalogTouchStart = useCallback((event) => {
+    if (!isMobileCatalogViewport()) return;
+
+    const target = event.target instanceof Element ? event.target : null;
+    if (target?.closest('.catalog-mobile-handle, input, textarea, select')) return;
+
+    const catalogList = event.currentTarget.querySelector('.catalog-list');
+    catalogTouchStartRef.current = {
+      y: event.touches[0]?.clientY ?? 0,
+      listScrollTop: catalogList?.scrollTop ?? 0
+    };
+  }, []);
+
+  const handleCatalogTouchEnd = useCallback((event) => {
+    const gesture = catalogTouchStartRef.current;
+    catalogTouchStartRef.current = null;
+    if (!gesture) return;
+
+    const endY = event.changedTouches[0]?.clientY ?? gesture.y;
+    const deltaY = endY - gesture.y;
+    if (deltaY < -44 && !isCatalogExpanded) {
+      setIsCatalogExpanded(true);
+    }
+
+    if (deltaY > 44 && isCatalogExpanded && gesture.listScrollTop <= 8) {
+      setIsCatalogExpanded(false);
+    }
+  }, [isCatalogExpanded]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -387,19 +485,19 @@ export default function GisMap({ placesGeojson }) {
   return (
     <main className="app-shell">
       <section
-        className={`map-section ${isCatalogOpen ? 'catalog-visible' : 'catalog-hidden'}`}
+        className={`map-section ${isCatalogOpen ? 'catalog-visible' : 'catalog-hidden'} ${isCatalogExpanded ? 'catalog-expanded' : ''}`}
         aria-label="Bản đồ GIS có các điểm 3D"
       >
         <div ref={mapContainerRef} className="map-container" />
         <canvas ref={overlayCanvasRef} className="marker-overlay-canvas" aria-hidden="true" />
 
-        <div className={`catalog-dock ${isCatalogOpen ? 'open' : 'collapsed'}`}>
+        <div className={`catalog-dock ${isCatalogOpen ? 'open' : 'collapsed'} ${isCatalogExpanded ? 'expanded' : ''}`}>
           <div className="catalog-icon-rail" role="toolbar" aria-label="Điều hướng nhanh khi thu gọn">
             <div className="rail-section rail-summary-icons">
               <button
                 type="button"
                 className="rail-icon"
-                onClick={() => setIsCatalogOpen(true)}
+                onClick={openCatalog}
                 aria-label="Mở rộng danh sách"
                 title="Mở rộng"
               >
@@ -411,7 +509,7 @@ export default function GisMap({ placesGeojson }) {
               <button
                 type="button"
                 className={`rail-icon ${searchQuery ? 'active' : ''}`}
-                onClick={() => setIsCatalogOpen(true)}
+                onClick={openCatalog}
                 aria-label="Mở tìm kiếm"
                 title="Tìm kiếm"
               >
@@ -423,7 +521,7 @@ export default function GisMap({ placesGeojson }) {
               <button
                 type="button"
                 className={`rail-icon ${activeCategory !== 'all' ? 'active' : ''}`}
-                onClick={() => setIsCatalogOpen(true)}
+                onClick={openCatalog}
                 aria-label="Mở bộ lọc"
                 title="Bộ lọc"
               >
@@ -453,18 +551,25 @@ export default function GisMap({ placesGeojson }) {
             </div>
           </div>
 
-          <div id="places-catalog" className="catalog-panel" aria-label="Danh sách di tích 3D">
+          <div
+            id="places-catalog"
+            className="catalog-panel"
+            onWheel={handleCatalogWheel}
+            onTouchStart={handleCatalogTouchStart}
+            onTouchEnd={handleCatalogTouchEnd}
+            aria-label="Danh sách di tích 3D"
+          >
             {isCatalogOpen ? (
               <>
                 <button
                   type="button"
                   className="catalog-mobile-handle"
-                  onClick={() => setIsCatalogOpen(false)}
+                  onClick={handleCatalogHandleClick}
                   onPointerDown={handleCatalogDragStart}
                   onPointerUp={handleCatalogDragEnd}
                   onPointerCancel={handleCatalogDragCancel}
-                  aria-label={`Kéo xuống hoặc bấm để thu gọn danh sách. Đang hiển thị ${visibleFeatures.length} trên ${placesGeojson.features.length} điểm`}
-                  title="Thu gọn"
+                  aria-label={`${isCatalogExpanded ? 'Kéo xuống để về nửa màn hình' : 'Kéo lên để mở rộng, kéo xuống hoặc bấm để thu gọn'}. Đang hiển thị ${visibleFeatures.length} trên ${placesGeojson.features.length} điểm`}
+                  title={isCatalogExpanded ? 'Về nửa màn hình' : 'Điều chỉnh danh sách'}
                 >
                   <span aria-hidden="true" />
                 </button>
@@ -477,7 +582,7 @@ export default function GisMap({ placesGeojson }) {
                   <button
                     type="button"
                     className="catalog-collapse-button"
-                    onClick={() => setIsCatalogOpen(false)}
+                    onClick={closeCatalog}
                     aria-label={`Thu gọn danh sách. Đang hiển thị ${visibleFeatures.length} trên ${placesGeojson.features.length} điểm`}
                     title="Thu gọn"
                   >

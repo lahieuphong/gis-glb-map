@@ -625,6 +625,11 @@ code {
     left: 0;
     width: 100%;
     height: min(52svh, 480px);
+    transition: height 220ms ease, transform 220ms ease;
+  }
+
+  .catalog-dock.expanded {
+    height: calc(100svh - 24px);
   }
 
   .catalog-dock.collapsed {
