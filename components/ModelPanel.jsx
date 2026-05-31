@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 const APP_BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? '';
 const VIEWER_MESSAGE_TYPE = 'gis-model-viewer:set-model';
@@ -8,9 +8,25 @@ const VIEWER_READY_MESSAGE_TYPE = 'gis-model-viewer:ready';
 
 export default function ModelPanel({ selectedPlace, isOpen, onClose }) {
   const viewerFrameRef = useRef(null);
+  const debounceRef = useRef(null);
+  const [iframePlaceId, setIframePlaceId] = useState(null);
   const shouldRenderPlace = isOpen && selectedPlace;
-  const modelViewerFrameSrc = selectedPlace
-    ? `${APP_BASE_PATH}/model-viewer?p=${selectedPlace.id}`
+
+  // Debounce iframe reload: only navigate when user settles on a place for 300 ms.
+  // Prevents rapid navigations during spam clicking — each navigation would reload the
+  // entire iframe JS context and re-upload model textures to GPU unnecessarily.
+  useEffect(() => {
+    clearTimeout(debounceRef.current);
+    if (selectedPlace?.id) {
+      debounceRef.current = setTimeout(() => setIframePlaceId(selectedPlace.id), 300);
+    } else {
+      setIframePlaceId(null);
+    }
+    return () => clearTimeout(debounceRef.current);
+  }, [selectedPlace?.id]);
+
+  const modelViewerFrameSrc = iframePlaceId
+    ? `${APP_BASE_PATH}/model-viewer?p=${iframePlaceId}`
     : `${APP_BASE_PATH}/model-viewer`;
 
   const sendSelectedModelToViewer = useCallback(() => {
