@@ -41,6 +41,8 @@ const ICONS = {
   open: `${ICON_BASE_PATH}/icons/panel-open.svg`,
   collapse: `${ICON_BASE_PATH}/icons/panel-collapse.svg`
 };
+const CATALOG_DRAG_LIMIT = 260;
+const CATALOG_DRAG_RESISTANCE = 0.28;
 
 function getFeatureById(placesGeojson, id) {
   return placesGeojson.features.find((feature) => feature.properties.id === id);
@@ -82,11 +84,25 @@ function isMobileCatalogViewport() {
   return window.matchMedia('(max-width: 720px)').matches;
 }
 
+function clamp(value, min, max) {
+  return Math.min(Math.max(value, min), max);
+}
+
+function getCatalogDragPreviewOffset(deltaY, isCatalogOpen, isCatalogExpanded) {
+  const limitedDelta = clamp(deltaY, -CATALOG_DRAG_LIMIT, CATALOG_DRAG_LIMIT);
+  const shouldResist = (!isCatalogOpen && limitedDelta > 0) || (isCatalogExpanded && limitedDelta < 0);
+
+  return shouldResist ? limitedDelta * CATALOG_DRAG_RESISTANCE : limitedDelta;
+}
+
 export default function GisMap({ placesGeojson }) {
   const mapContainerRef = useRef(null);
   const mapRef = useRef(null);
   const overlayCanvasRef = useRef(null);
+  const catalogDockRef = useRef(null);
   const catalogDragStartRef = useRef(null);
+  const catalogDragFrameRef = useRef(null);
+  const catalogDragOffsetRef = useRef(0);
   const catalogTouchStartRef = useRef(null);
   const suppressCatalogHandleClickRef = useRef(false);
   const drawStateRef = useRef(null);
@@ -359,15 +375,60 @@ export default function GisMap({ placesGeojson }) {
     setIsCatalogOpen(true);
   }, []);
 
+  const openCatalogExpanded = useCallback(() => {
+    setIsCatalogOpen(true);
+    setIsCatalogExpanded(true);
+  }, []);
+
   const closeCatalog = useCallback(() => {
     setIsCatalogExpanded(false);
     setIsCatalogOpen(false);
   }, []);
 
+  const setCatalogDragOffset = useCallback((offset) => {
+    if (typeof window === 'undefined') return;
+
+    const dock = catalogDockRef.current;
+    if (!dock) return;
+
+    catalogDragOffsetRef.current = offset;
+    dock.classList.add('dragging');
+
+    if (catalogDragFrameRef.current) return;
+
+    catalogDragFrameRef.current = window.requestAnimationFrame(() => {
+      catalogDragFrameRef.current = null;
+      dock.style.setProperty('--catalog-drag-y', `${catalogDragOffsetRef.current.toFixed(1)}px`);
+    });
+  }, []);
+
+  const resetCatalogDragOffset = useCallback(() => {
+    if (typeof window !== 'undefined' && catalogDragFrameRef.current) {
+      window.cancelAnimationFrame(catalogDragFrameRef.current);
+      catalogDragFrameRef.current = null;
+    }
+
+    catalogDragOffsetRef.current = 0;
+    const dock = catalogDockRef.current;
+    if (!dock) return;
+
+    dock.classList.remove('dragging');
+    dock.style.removeProperty('--catalog-drag-y');
+  }, []);
+
   const handleCatalogDragStart = useCallback((event) => {
     catalogDragStartRef.current = event.clientY;
+    setCatalogDragOffset(0);
     event.currentTarget.setPointerCapture?.(event.pointerId);
-  }, []);
+  }, [setCatalogDragOffset]);
+
+  const handleCatalogDragMove = useCallback((event) => {
+    const startY = catalogDragStartRef.current;
+    if (typeof startY !== 'number' || !isMobileCatalogViewport()) return;
+
+    const deltaY = event.clientY - startY;
+    setCatalogDragOffset(getCatalogDragPreviewOffset(deltaY, isCatalogOpen, isCatalogExpanded));
+  }, [isCatalogExpanded, isCatalogOpen, setCatalogDragOffset]);
 
   const handleCatalogDragEnd = useCallback((event) => {
     const startY = catalogDragStartRef.current;
@@ -377,18 +438,24 @@ export default function GisMap({ placesGeojson }) {
       dragTarget.releasePointerCapture(event.pointerId);
     }
 
-    if (!isMobileCatalogViewport()) return;
+    resetCatalogDragOffset();
+
+    if (typeof startY !== 'number' || !isMobileCatalogViewport()) return;
 
     const deltaY = event.clientY - startY;
     if (typeof startY === 'number' && Math.abs(deltaY) > 36) {
       suppressCatalogHandleClickRef.current = true;
       window.setTimeout(() => {
         suppressCatalogHandleClickRef.current = false;
-      }, 0);
+      }, 180);
     }
 
     if (typeof startY === 'number' && deltaY < -36) {
-      setIsCatalogExpanded(true);
+      if (isCatalogOpen) {
+        openCatalogExpanded();
+      } else {
+        openCatalog();
+      }
     }
 
     if (typeof startY === 'number' && deltaY > 36) {
@@ -398,7 +465,7 @@ export default function GisMap({ placesGeojson }) {
         closeCatalog();
       }
     }
-  }, [closeCatalog, isCatalogExpanded]);
+  }, [closeCatalog, isCatalogExpanded, isCatalogOpen, openCatalog, openCatalogExpanded, resetCatalogDragOffset]);
 
   const handleCatalogDragCancel = useCallback((event) => {
     const dragTarget = event.currentTarget;
@@ -406,7 +473,8 @@ export default function GisMap({ placesGeojson }) {
     if (dragTarget.hasPointerCapture?.(event.pointerId)) {
       dragTarget.releasePointerCapture(event.pointerId);
     }
-  }, []);
+    resetCatalogDragOffset();
+  }, [resetCatalogDragOffset]);
 
   const handleCatalogHandleClick = useCallback((event) => {
     if (!isMobileCatalogViewport()) return;
@@ -423,6 +491,16 @@ export default function GisMap({ placesGeojson }) {
       closeCatalog();
     }
   }, [closeCatalog, isCatalogExpanded]);
+
+  const handleCatalogRailClick = useCallback((event) => {
+    if (suppressCatalogHandleClickRef.current) {
+      event.preventDefault();
+      suppressCatalogHandleClickRef.current = false;
+      return;
+    }
+
+    openCatalog();
+  }, [openCatalog]);
 
   const handleCatalogWheel = useCallback((event) => {
     if (!isMobileCatalogViewport()) return;
@@ -444,7 +522,7 @@ export default function GisMap({ placesGeojson }) {
     if (!isMobileCatalogViewport()) return;
 
     const target = event.target instanceof Element ? event.target : null;
-    if (target?.closest('.catalog-mobile-handle, input, textarea, select')) return;
+    if (target?.closest('.catalog-mobile-handle, .catalog-rail, input, textarea, select')) return;
 
     const catalogList = event.currentTarget.querySelector('.catalog-list');
     catalogTouchStartRef.current = {
@@ -460,14 +538,44 @@ export default function GisMap({ placesGeojson }) {
 
     const endY = event.changedTouches[0]?.clientY ?? gesture.y;
     const deltaY = endY - gesture.y;
+    resetCatalogDragOffset();
+
     if (deltaY < -44 && !isCatalogExpanded) {
-      setIsCatalogExpanded(true);
+      suppressCatalogHandleClickRef.current = true;
+      window.setTimeout(() => {
+        suppressCatalogHandleClickRef.current = false;
+      }, 180);
+      if (isCatalogOpen) {
+        openCatalogExpanded();
+      } else {
+        openCatalog();
+      }
     }
 
     if (deltaY > 44 && isCatalogExpanded && gesture.listScrollTop <= 8) {
       setIsCatalogExpanded(false);
     }
-  }, [isCatalogExpanded]);
+  }, [isCatalogExpanded, isCatalogOpen, openCatalog, openCatalogExpanded, resetCatalogDragOffset]);
+
+  const handleCatalogTouchMove = useCallback((event) => {
+    const gesture = catalogTouchStartRef.current;
+    if (!gesture || !isMobileCatalogViewport()) return;
+
+    const currentY = event.touches[0]?.clientY ?? gesture.y;
+    const deltaY = currentY - gesture.y;
+    const shouldPreviewExpand = deltaY < -8 && !isCatalogExpanded;
+    const shouldPreviewCollapse = deltaY > 8 && isCatalogExpanded && gesture.listScrollTop <= 8;
+
+    if (shouldPreviewExpand || shouldPreviewCollapse) {
+      setCatalogDragOffset(getCatalogDragPreviewOffset(deltaY, isCatalogOpen, isCatalogExpanded));
+    }
+  }, [isCatalogExpanded, isCatalogOpen, setCatalogDragOffset]);
+
+  useEffect(() => {
+    return () => {
+      resetCatalogDragOffset();
+    };
+  }, [resetCatalogDragOffset]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -491,7 +599,10 @@ export default function GisMap({ placesGeojson }) {
         <div ref={mapContainerRef} className="map-container" />
         <canvas ref={overlayCanvasRef} className="marker-overlay-canvas" aria-hidden="true" />
 
-        <div className={`catalog-dock ${isCatalogOpen ? 'open' : 'collapsed'} ${isCatalogExpanded ? 'expanded' : ''}`}>
+        <div
+          ref={catalogDockRef}
+          className={`catalog-dock ${isCatalogOpen ? 'open' : 'collapsed'} ${isCatalogExpanded ? 'expanded' : ''}`}
+        >
           <div className="catalog-icon-rail" role="toolbar" aria-label="Điều hướng nhanh khi thu gọn">
             <div className="rail-section rail-summary-icons">
               <button
@@ -556,6 +667,7 @@ export default function GisMap({ placesGeojson }) {
             className="catalog-panel"
             onWheel={handleCatalogWheel}
             onTouchStart={handleCatalogTouchStart}
+            onTouchMove={handleCatalogTouchMove}
             onTouchEnd={handleCatalogTouchEnd}
             aria-label="Danh sách di tích 3D"
           >
@@ -566,6 +678,7 @@ export default function GisMap({ placesGeojson }) {
                   className="catalog-mobile-handle"
                   onClick={handleCatalogHandleClick}
                   onPointerDown={handleCatalogDragStart}
+                  onPointerMove={handleCatalogDragMove}
                   onPointerUp={handleCatalogDragEnd}
                   onPointerCancel={handleCatalogDragCancel}
                   aria-label={`${isCatalogExpanded ? 'Kéo xuống để về nửa màn hình' : 'Kéo lên để mở rộng, kéo xuống hoặc bấm để thu gọn'}. Đang hiển thị ${visibleFeatures.length} trên ${placesGeojson.features.length} điểm`}
@@ -650,10 +763,21 @@ export default function GisMap({ placesGeojson }) {
                 {mapError ? <p className="error-text">{mapError}</p> : null}
               </>
             ) : (
-              <div className="catalog-rail" aria-hidden="true">
-                <span>GIS</span>
-                <strong>{placesGeojson.features.length}</strong>
-              </div>
+              <button
+                type="button"
+                className="catalog-rail"
+                onClick={handleCatalogRailClick}
+                onPointerDown={handleCatalogDragStart}
+                onPointerMove={handleCatalogDragMove}
+                onPointerUp={handleCatalogDragEnd}
+                onPointerCancel={handleCatalogDragCancel}
+                aria-label={`Mở danh sách di tích 3D. Có ${placesGeojson.features.length} điểm`}
+                title="Mở danh sách"
+              >
+                <span aria-hidden="true" />
+                <strong>Bản đồ di tích 3D</strong>
+                <small>{placesGeojson.features.length} điểm</small>
+              </button>
             )}
           </div>
         </div>

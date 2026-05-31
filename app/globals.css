@@ -441,7 +441,10 @@ code {
   gap: 14px;
   width: 100%;
   height: 100%;
+  border: 0;
+  background: transparent;
   color: #111827;
+  cursor: pointer;
 }
 
 .catalog-rail span {
@@ -619,13 +622,22 @@ code {
   }
 
   .catalog-dock {
+    --catalog-drag-y: 0px;
     top: auto;
     right: 0;
     bottom: 0;
     left: 0;
     width: 100%;
     height: min(52svh, 480px);
-    transition: height 220ms ease, transform 220ms ease;
+    transform: translate3d(0, var(--catalog-drag-y), 0);
+    transition:
+      height 280ms cubic-bezier(0.22, 1, 0.36, 1),
+      transform 280ms cubic-bezier(0.22, 1, 0.36, 1);
+    will-change: height, transform;
+  }
+
+  .catalog-dock.dragging {
+    transition: none;
   }
 
   .catalog-dock.expanded {
@@ -633,7 +645,7 @@ code {
   }
 
   .catalog-dock.collapsed {
-    transform: translateY(calc(100% - 56px));
+    transform: translate3d(0, calc(100% - 76px + var(--catalog-drag-y)), 0);
   }
 
   .catalog-icon-rail {
@@ -683,6 +695,7 @@ code {
   }
 
   .catalog-dock.collapsed .catalog-icon-rail {
+    display: none;
     transform: translateY(0);
   }
 
@@ -701,7 +714,56 @@ code {
     border-right: 0;
     border-bottom: 0;
     border-left: 0;
-    border-radius: 8px 8px 0 0;
+    border-radius: 16px 16px 0 0;
+    overscroll-behavior: contain;
+    transform: translateZ(0);
+  }
+
+  .catalog-dock.collapsed .catalog-panel {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .catalog-rail {
+    align-content: start;
+    justify-items: center;
+    gap: 4px;
+    height: 76px;
+    padding: 10px 20px 12px;
+    cursor: grab;
+    text-align: center;
+    touch-action: none;
+  }
+
+  .catalog-rail:active {
+    cursor: grabbing;
+  }
+
+  .catalog-rail span {
+    display: block;
+    width: 44px;
+    height: 4px;
+    border-radius: 999px;
+    background: #94a3b8;
+    writing-mode: horizontal-tb;
+  }
+
+  .catalog-rail strong {
+    display: block;
+    width: auto;
+    height: auto;
+    border-radius: 0;
+    background: transparent;
+    color: #111827;
+    font-size: 15px;
+    line-height: 1.1;
+  }
+
+  .catalog-rail small {
+    color: #64748b;
+    font-size: 12px;
+    font-weight: 800;
+    line-height: 1;
   }
 
   .catalog-mobile-handle {
@@ -749,6 +811,8 @@ code {
   .catalog-list {
     padding-right: 8px;
     padding-left: 8px;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
   }
 
   .map-section.catalog-visible .maplibregl-ctrl-bottom-left {
@@ -756,9 +820,22 @@ code {
     bottom: min(52svh, 480px);
   }
 
+  .map-section.catalog-visible .maplibregl-ctrl-bottom-right {
+    bottom: min(52svh, 480px);
+  }
+
+  .map-section.catalog-expanded .maplibregl-ctrl-bottom-left,
+  .map-section.catalog-expanded .maplibregl-ctrl-bottom-right {
+    bottom: calc(100svh - 24px);
+  }
+
   .map-section.catalog-hidden .maplibregl-ctrl-bottom-left {
     left: 0;
-    bottom: 56px;
+    bottom: 76px;
+  }
+
+  .map-section.catalog-hidden .maplibregl-ctrl-bottom-right {
+    bottom: 76px;
   }
 
   .viewer-panel {
