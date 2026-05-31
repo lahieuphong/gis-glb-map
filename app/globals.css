@@ -648,6 +648,21 @@ code {
     transform: translate3d(0, calc(100% - 76px + var(--catalog-drag-y)), 0);
   }
 
+  /* Gap-fill: covers the strip of map that shows below the sheet during upward drag.
+     The dock translates up by --catalog-drag-y (up to -260px), leaving a gap at the
+     viewport bottom. This extension moves with the dock and seals it. Clipped by
+     app-shell overflow:hidden so it is invisible when the dock is not being dragged. */
+  .catalog-dock::after {
+    content: '';
+    position: absolute;
+    bottom: -300px;
+    left: 0;
+    right: 0;
+    height: 300px;
+    background: #ffffff;
+    pointer-events: none;
+  }
+
   .catalog-icon-rail {
     top: -62px;
     right: 12px;
