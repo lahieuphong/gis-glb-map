@@ -79,7 +79,11 @@ function isExpectedTileError(error) {
 export default function GisMap({ placesGeojson }) {
   const mapContainerRef = useRef(null);
   const mapRef = useRef(null);
-  const markerRefs = useRef([]);
+  const overlayCanvasRef = useRef(null);
+  const drawStateRef = useRef(null);
+  const markersScreenRef = useRef([]);
+  const drawMarkersRef = useRef(null);
+  const resizeObserverRef = useRef(null);
   const [selectedPlace, setSelectedPlace] = useState(null);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   const [mapError, setMapError] = useState('');
@@ -116,6 +120,9 @@ export default function GisMap({ placesGeojson }) {
     () => new Set(visibleFeatures.map((feature) => feature.properties.id)),
     [visibleFeatures]
   );
+
+  // Update draw state ref on every render so canvas draw function always reads current values
+  drawStateRef.current = { visiblePlaceIds, selectedPlace, placeIndexById };
 
   useEffect(() => {
     let isMounted = true;
@@ -182,51 +189,121 @@ export default function GisMap({ placesGeojson }) {
             }
           });
 
-          markerRefs.current = placesGeojson.features.map((feature, index) => {
-            const markerElement = document.createElement('button');
-            markerElement.type = 'button';
-            markerElement.className = 'place-marker-pin';
-            markerElement.textContent = String(index + 1);
-            markerElement.setAttribute('aria-label', feature.properties.name);
-            markerElement.title = feature.properties.name;
-            markerElement.addEventListener('click', () => {
-              focusMapOnCoordinates(map, feature.geometry.coordinates);
-              setSelectedPlace(feature.properties);
-              setIsPanelOpen(true);
-            });
+          // Canvas overlay: renders all markers in a single GPU-composited layer.
+          // Replaces individual HTML DOM markers — scales to 1000+ places with no layout cost.
+          const canvas = overlayCanvasRef.current;
+          if (canvas) {
+            function resizeCanvas() {
+              const dpr = window.devicePixelRatio || 1;
+              const container = map.getContainer();
+              canvas.width = container.offsetWidth * dpr;
+              canvas.height = container.offsetHeight * dpr;
+            }
+            resizeCanvas();
+            const resizeObserver = new ResizeObserver(resizeCanvas);
+            resizeObserver.observe(map.getContainer());
+            resizeObserverRef.current = resizeObserver;
 
-            const marker = new maplibregl.Marker({
-              element: markerElement,
-              anchor: 'center'
-            })
-              .setLngLat(feature.geometry.coordinates)
-              .addTo(map);
+            function drawMarkers() {
+              if (!drawStateRef.current) return;
+              const { visiblePlaceIds, selectedPlace, placeIndexById } = drawStateRef.current;
+              const ctx = canvas.getContext('2d');
+              const dpr = window.devicePixelRatio || 1;
+              const cw = canvas.width / dpr;
+              const ch = canvas.height / dpr;
 
-            return {
-              id: feature.properties.id,
-              element: markerElement,
-              marker
-            };
+              ctx.clearRect(0, 0, canvas.width, canvas.height);
+              ctx.save();
+              ctx.scale(dpr, dpr);
+
+              const visible = [];
+              for (const feature of placesGeojson.features) {
+                if (!visiblePlaceIds.has(feature.properties.id)) continue;
+                const pt = map.project(feature.geometry.coordinates);
+                if (pt.x < -20 || pt.x > cw + 20 || pt.y < -20 || pt.y > ch + 20) continue;
+                visible.push({
+                  x: pt.x,
+                  y: pt.y,
+                  index: placeIndexById.get(feature.properties.id),
+                  isSelected: selectedPlace?.id === feature.properties.id,
+                  coordinates: feature.geometry.coordinates,
+                  properties: feature.properties
+                });
+              }
+              markersScreenRef.current = visible;
+
+              const R = 14;
+
+              // Batch fill all normal circles in one path call
+              ctx.fillStyle = '#2563eb';
+              ctx.beginPath();
+              for (const m of visible) {
+                if (m.isSelected) continue;
+                ctx.moveTo(m.x + R, m.y);
+                ctx.arc(m.x, m.y, R, 0, 2 * Math.PI);
+              }
+              ctx.fill();
+
+              // Batch stroke all normal circles
+              ctx.strokeStyle = '#ffffff';
+              ctx.lineWidth = 2;
+              ctx.beginPath();
+              for (const m of visible) {
+                if (m.isSelected) continue;
+                ctx.moveTo(m.x + R, m.y);
+                ctx.arc(m.x, m.y, R, 0, 2 * Math.PI);
+              }
+              ctx.stroke();
+
+              // Selected marker drawn on top
+              const sel = visible.find((m) => m.isSelected);
+              if (sel) {
+                ctx.fillStyle = '#1d4ed8';
+                ctx.beginPath();
+                ctx.arc(sel.x, sel.y, R, 0, 2 * Math.PI);
+                ctx.fill();
+                ctx.strokeStyle = '#fbbf24';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.arc(sel.x, sel.y, R, 0, 2 * Math.PI);
+                ctx.stroke();
+              }
+
+              // Labels
+              ctx.fillStyle = '#ffffff';
+              ctx.textAlign = 'center';
+              ctx.textBaseline = 'middle';
+              for (const m of visible) {
+                ctx.font = `900 ${m.index > 99 ? 9 : 10}px system-ui, sans-serif`;
+                ctx.fillText(String(m.index), m.x, m.y);
+              }
+
+              ctx.restore();
+            }
+
+            drawMarkersRef.current = drawMarkers;
+            map.on('render', drawMarkers);
+          }
+
+          // Proximity-based click and cursor using pre-computed canvas marker positions
+          map.on('click', (event) => {
+            const pt = event.point;
+            for (const m of markersScreenRef.current) {
+              if (Math.hypot(pt.x - m.x, pt.y - m.y) <= 14) {
+                focusMapOnCoordinates(map, m.coordinates);
+                setSelectedPlace(m.properties);
+                setIsPanelOpen(true);
+                return;
+              }
+            }
           });
 
-          map.on('mouseenter', 'places-circle', () => {
-            map.getCanvas().style.cursor = 'pointer';
-          });
-
-          map.on('mouseleave', 'places-circle', () => {
-            map.getCanvas().style.cursor = '';
-          });
-
-          map.on('click', 'places-circle', (event) => {
-            const feature = event.features?.[0];
-            if (!feature) return;
-
-            const coordinates = feature.geometry.coordinates.slice();
-            const properties = feature.properties;
-
-            focusMapOnCoordinates(map, coordinates);
-            setSelectedPlace(properties);
-            setIsPanelOpen(true);
+          map.on('mousemove', (event) => {
+            const pt = event.point;
+            const isNear = markersScreenRef.current.some(
+              (m) => Math.hypot(pt.x - m.x, pt.y - m.y) <= 14
+            );
+            map.getCanvas().style.cursor = isNear ? 'pointer' : '';
           });
 
           setIsMapReady(true);
@@ -249,9 +326,9 @@ export default function GisMap({ placesGeojson }) {
 
     return () => {
       isMounted = false;
+      resizeObserverRef.current?.disconnect();
+      resizeObserverRef.current = null;
       if (mapRef.current) {
-        markerRefs.current.forEach(({ marker }) => marker.remove());
-        markerRefs.current = [];
         mapRef.current.remove();
         mapRef.current = null;
       }
@@ -272,18 +349,12 @@ export default function GisMap({ placesGeojson }) {
     if (!isMapReady || !map) return;
 
     const ids = Array.from(visiblePlaceIds);
-
     if (map.getLayer('places-circle')) {
       map.setFilter('places-circle', ['in', ['get', 'id'], ['literal', ids]]);
     }
 
-    markerRefs.current.forEach(({ id, element }) => {
-      const isVisible = visiblePlaceIds.has(id);
-      const isSelected = selectedPlace?.id === id;
-
-      element.hidden = !isVisible;
-      element.classList.toggle('selected', isSelected);
-    });
+    // Redraw canvas markers when filter/selection changes without map movement
+    drawMarkersRef.current?.();
   }, [isMapReady, selectedPlace, visiblePlaceIds]);
 
   return (
@@ -293,6 +364,7 @@ export default function GisMap({ placesGeojson }) {
         aria-label="Bản đồ GIS có các điểm 3D"
       >
         <div ref={mapContainerRef} className="map-container" />
+        <canvas ref={overlayCanvasRef} className="marker-overlay-canvas" aria-hidden="true" />
 
         <div className={`catalog-dock ${isCatalogOpen ? 'open' : 'collapsed'}`}>
           <div className="catalog-icon-rail" role="toolbar" aria-label="Điều hướng nhanh khi thu gọn">
