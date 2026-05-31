@@ -21,6 +21,16 @@ export default function ModelViewerPage() {
   const [modelResetKey, setModelResetKey] = useState(0);
 
   useEffect(() => {
+    // Prevent BFCache: Chrome freezes the iframe document in memory instead of unloading it,
+    // preserving @google/model-viewer's global model cache and WebGL resources across navigations.
+    // An unload listener disables BFCache, ensuring the old JS context is truly freed each time
+    // the iframe navigates to a different place URL (?p=...).
+    function noop() {}
+    window.addEventListener('unload', noop);
+    return () => window.removeEventListener('unload', noop);
+  }, []);
+
+  useEffect(() => {
     function resetModel(nextModel) {
       clearResourceTimingBuffer();
 

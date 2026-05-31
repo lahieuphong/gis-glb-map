@@ -9,7 +9,9 @@ const VIEWER_READY_MESSAGE_TYPE = 'gis-model-viewer:ready';
 export default function ModelPanel({ selectedPlace, isOpen, onClose }) {
   const viewerFrameRef = useRef(null);
   const shouldRenderPlace = isOpen && selectedPlace;
-  const modelViewerFrameSrc = `${APP_BASE_PATH}/model-viewer`;
+  const modelViewerFrameSrc = selectedPlace
+    ? `${APP_BASE_PATH}/model-viewer?p=${selectedPlace.id}`
+    : `${APP_BASE_PATH}/model-viewer`;
 
   const sendSelectedModelToViewer = useCallback(() => {
     if (!shouldRenderPlace || !viewerFrameRef.current?.contentWindow) return;
