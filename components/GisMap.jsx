@@ -80,6 +80,7 @@ export default function GisMap({ placesGeojson }) {
   const mapContainerRef = useRef(null);
   const mapRef = useRef(null);
   const overlayCanvasRef = useRef(null);
+  const catalogDragStartRef = useRef(null);
   const drawStateRef = useRef(null);
   const markersScreenRef = useRef([]);
   const drawMarkersRef = useRef(null);
@@ -344,6 +345,32 @@ export default function GisMap({ placesGeojson }) {
     setIsPanelOpen(true);
   }, [placesGeojson]);
 
+  const handleCatalogDragStart = useCallback((event) => {
+    catalogDragStartRef.current = event.clientY;
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+  }, []);
+
+  const handleCatalogDragEnd = useCallback((event) => {
+    const startY = catalogDragStartRef.current;
+    const dragTarget = event.currentTarget;
+    catalogDragStartRef.current = null;
+    if (dragTarget.hasPointerCapture?.(event.pointerId)) {
+      dragTarget.releasePointerCapture(event.pointerId);
+    }
+
+    if (typeof startY === 'number' && event.clientY - startY > 36) {
+      setIsCatalogOpen(false);
+    }
+  }, []);
+
+  const handleCatalogDragCancel = useCallback((event) => {
+    const dragTarget = event.currentTarget;
+    catalogDragStartRef.current = null;
+    if (dragTarget.hasPointerCapture?.(event.pointerId)) {
+      dragTarget.releasePointerCapture(event.pointerId);
+    }
+  }, []);
+
   useEffect(() => {
     const map = mapRef.current;
     if (!isMapReady || !map) return;
@@ -429,6 +456,19 @@ export default function GisMap({ placesGeojson }) {
           <div id="places-catalog" className="catalog-panel" aria-label="Danh sách di tích 3D">
             {isCatalogOpen ? (
               <>
+                <button
+                  type="button"
+                  className="catalog-mobile-handle"
+                  onClick={() => setIsCatalogOpen(false)}
+                  onPointerDown={handleCatalogDragStart}
+                  onPointerUp={handleCatalogDragEnd}
+                  onPointerCancel={handleCatalogDragCancel}
+                  aria-label={`Kéo xuống hoặc bấm để thu gọn danh sách. Đang hiển thị ${visibleFeatures.length} trên ${placesGeojson.features.length} điểm`}
+                  title="Thu gọn"
+                >
+                  <span aria-hidden="true" />
+                </button>
+
                 <div className="catalog-header">
                   <div>
                     <p className="eyebrow">GIS + GLB</p>
