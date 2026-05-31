@@ -669,6 +669,14 @@ export default function GisMap({ placesGeojson }) {
             onTouchStart={handleCatalogTouchStart}
             onTouchMove={handleCatalogTouchMove}
             onTouchEnd={handleCatalogTouchEnd}
+            onPointerDown={(e) => {
+              // Exclude the handle (has its own handlers), the scrollable list, and form fields
+              if (e.target?.closest?.('.catalog-mobile-handle, .catalog-list, input, textarea, select')) return;
+              handleCatalogDragStart(e);
+            }}
+            onPointerMove={handleCatalogDragMove}
+            onPointerUp={handleCatalogDragEnd}
+            onPointerCancel={handleCatalogDragCancel}
             aria-label="Danh sách di tích 3D"
           >
             {isCatalogOpen ? (

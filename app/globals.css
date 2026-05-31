@@ -723,6 +723,7 @@ code {
     border-radius: 16px 16px 0 0;
     overscroll-behavior: contain;
     transform: translateZ(0);
+    touch-action: none;
   }
 
   .catalog-dock.collapsed .catalog-panel {
@@ -819,6 +820,7 @@ code {
     padding-left: 8px;
     overscroll-behavior: contain;
     -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
   }
 
   .map-section.catalog-visible .maplibregl-ctrl-bottom-left {
