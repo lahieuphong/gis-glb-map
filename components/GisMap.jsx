@@ -720,12 +720,11 @@ export default function GisMap({ placesGeojson }) {
                 </div>
 
                 <label className="search-field">
-                  <span>Tìm kiếm</span>
                   <input
                     type="search"
                     value={searchQuery}
                     onChange={(event) => setSearchQuery(event.target.value)}
-                    placeholder="Tên di tích, nhóm, mô tả..."
+                    placeholder="Tìm kiếm tên di tích, nhóm, mô tả..."
                   />
                 </label>
 
