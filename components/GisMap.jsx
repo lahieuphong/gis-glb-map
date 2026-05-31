@@ -527,9 +527,13 @@ export default function GisMap({ placesGeojson }) {
     const catalogList = event.currentTarget.querySelector('.catalog-list');
     catalogTouchStartRef.current = {
       y: event.touches[0]?.clientY ?? 0,
-      listScrollTop: catalogList?.scrollTop ?? 0
+      listScrollTop: catalogList?.scrollTop ?? 0,
+      // Snapshot state at gesture start so touch-end decisions are immune to
+      // state changes that the pointer handler may have applied before touchend fires.
+      wasExpanded: isCatalogExpanded,
+      wasOpen: isCatalogOpen,
     };
-  }, []);
+  }, [isCatalogExpanded, isCatalogOpen]);
 
   const handleCatalogTouchEnd = useCallback((event) => {
     const gesture = catalogTouchStartRef.current;
@@ -540,26 +544,27 @@ export default function GisMap({ placesGeojson }) {
     const deltaY = endY - gesture.y;
     resetCatalogDragOffset();
 
-    if (deltaY < -44 && !isCatalogExpanded) {
+    // Use gesture.wasExpanded/wasOpen (state at touch-start) so that a preceding
+    // pointerup handler updating state does not alter our snap decision.
+    if (deltaY < -44 && !gesture.wasExpanded) {
       suppressCatalogHandleClickRef.current = true;
       window.setTimeout(() => {
         suppressCatalogHandleClickRef.current = false;
       }, 180);
-      if (isCatalogOpen) {
+      if (gesture.wasOpen) {
         openCatalogExpanded();
       } else {
         openCatalog();
       }
     }
 
-    if (deltaY > 44 && isCatalogExpanded && gesture.listScrollTop <= 8) {
+    if (deltaY > 44 && gesture.wasExpanded && gesture.listScrollTop <= 8) {
       setIsCatalogExpanded(false);
     }
-    // Missing case: drag DOWN from open (non-expanded) → close catalog
-    if (deltaY > 44 && !isCatalogExpanded && isCatalogOpen) {
+    if (deltaY > 44 && !gesture.wasExpanded && gesture.wasOpen) {
       closeCatalog();
     }
-  }, [closeCatalog, isCatalogExpanded, isCatalogOpen, openCatalog, openCatalogExpanded, resetCatalogDragOffset]);
+  }, [closeCatalog, openCatalog, openCatalogExpanded, resetCatalogDragOffset]);
 
   const handleCatalogTouchMove = useCallback((event) => {
     const gesture = catalogTouchStartRef.current;
