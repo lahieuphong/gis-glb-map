@@ -683,8 +683,8 @@ export default function GisMap({ placesGeojson }) {
             onTouchMove={handleCatalogTouchMove}
             onTouchEnd={handleCatalogTouchEnd}
             onPointerDown={(e) => {
-              // Exclude the handle (has its own handlers), the scrollable list, and form fields
-              if (e.target?.closest?.('.catalog-mobile-handle, .catalog-list, input, textarea, select')) return;
+              // Exclude the handle (has its own handlers) and form fields
+              if (e.target?.closest?.('.catalog-mobile-handle, input, textarea, select')) return;
               handleCatalogDragStart(e);
             }}
             onPointerMove={handleCatalogDragMove}

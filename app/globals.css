@@ -818,7 +818,6 @@ code {
     padding-left: 8px;
     overscroll-behavior: contain;
     -webkit-overflow-scrolling: touch;
-    touch-action: pan-y;
   }
 
   .map-section.catalog-visible .maplibregl-ctrl-bottom-left {
